@@ -15,22 +15,26 @@
             </a>
             <!-- Kode Course -->
             <div class="px-4 py-2 bg-[#234e7f] text-white rounded-lg text-sm font-semibold">
-                {{ $courseCodeFull }}
+                {{ $formattedCourseCode ?? 'Unknown Course' }}
             </div>
         </div>
 
         <!-- Nama Course -->
-        <h2 class="text-lg font-semibold text-gray-800 text-center mt-4">{{ $courseName }}</h2>
+        <h2 class="text-lg font-semibold text-gray-800 text-center mt-4">{{ $courseName ?? 'Unnamed Course' }}</h2>
 
         <!-- Nilai Kuis -->
         <h3 class="text-lg font-semibold text-gray-800 mt-6">Nilai Kuis</h3>
         <ul class="mt-2 space-y-2 w-full">
+            @if(isset($quizScores) && count($quizScores) > 0)
             @foreach ($quizScores as $index => $score)
             <li class="flex justify-between bg-gray-100 p-2 rounded-lg">
                 <span>Kuis {{ $index + 1 }}</span>
                 <span>{{ $score }}</span>
             </li>
             @endforeach
+            @else
+            <li class="text-gray-500 text-center">Belum ada nilai kuis</li>
+            @endif
         </ul>
     </div>
 
@@ -42,20 +46,41 @@
             <div class="p-6 bg-white rounded-xl shadow-md flex flex-col space-y-3 border border-gray-200">
                 <h4 class="text-lg font-semibold text-gray-800">Week {{ $week + 1 }}</h4>
                 <p class="text-gray-600">Materi Week {{ $week + 1 }}</p>
+
+                <!-- Link PDF hanya ditampilkan jika tersedia -->
                 @if (!empty($material['pdf']))
                 <a href="{{ asset($material['pdf']) }}" target="_blank" class="text-blue-600 font-semibold hover:underline">
                     Open PDF
                 </a>
+                @else
+                <p class="text-gray-500">Materi tidak tersedia</p>
                 @endif
+
+                <!-- Penandaan Optional -->
                 @if (!empty($material['optional']))
                 <p class="text-gray-500">(Optional)</p>
                 @endif
+
+                <!-- Tampilkan Kuis jika minggu ke-4, 7, 10, atau 14 -->
                 @if (in_array($week + 1, [4, 7, 10, 14]))
+                @php
+                $quizMapping = [4 => 1, 7 => 2, 10 => 3, 14 => 4];
+                $quizId = $quizMapping[$week + 1];
+                @endphp
                 <div class="p-4 bg-gray-100 rounded-lg shadow-inner">
-                    <p class="text-gray-700 font-semibold">Kuis</p>
-                    <p class="text-gray-500">Belum tersedia</p>
+                    <p class="text-gray-700 font-semibold">Kuis {{ $quizId }}</p>
+
+                    <a href="{{ route('kuis.start', ['courseCode' => $courseCodeWithoutDash, 'quizId' => $quizId]) }}"
+                       class="text-blue-600 font-semibold hover:underline">
+                        Mulai Kuis {{ $quizId }}
+                    </a>
                 </div>
                 @endif
+
+
+
+
+                <!-- Tempat untuk Video Materi (placeholder untuk sekarang) -->
                 <div class="p-4 bg-gray-100 rounded-lg shadow-inner">
                     <p class="text-gray-700 font-semibold">Video Materi Week {{ $week + 1 }}</p>
                     <p class="text-gray-500">Belum tersedia</p>

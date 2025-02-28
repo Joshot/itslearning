@@ -6,32 +6,31 @@ use Illuminate\Http\Request;
 
 class CourseController extends Controller
 {
-    public function show(Request $request, $courseCode)
+    public function show($courseCode)
     {
-        // Ambil daftar courses dari config
-        $courses = config('courses', []);
+        // Format kode kursus dari URL (if540d menjadi IF540-D)
+        $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
 
-        // Ubah input jadi huruf besar untuk pencocokan
-        $courseCode = strtoupper($courseCode);
+        // Ambil daftar kursus dari konfigurasi
+        $courses = config('courses');
 
-        // Mencari kecocokan dengan menghapus tanda '-' dari kode dalam config
-        $matchedCourse = collect($courses)->first(function ($course) use ($courseCode) {
-            return strtoupper(str_replace('-', '', $course['code'])) === $courseCode;
-        });
+        // Cari kursus berdasarkan kode yang diformat
+        $course = collect($courses)->firstWhere('code', $formattedCourseCode);
 
-        // Jika ditemukan, gunakan data course; jika tidak, berikan default
-        $courseName = $matchedCourse['name'] ?? 'Unknown Course';
-        $courseCodeFull = $matchedCourse['code'] ?? 'N/A';
+        if (!$course) {
+            return redirect()->route('dashboard')->with('error', 'Course not found');
+        }
 
-        // **Pastikan materials selalu array**
-        $materials = $matchedCourse['materials'] ?? [];
+        // Ambil nama kursus dan materi
+        $courseName = $course['name'];
+        $materials = $course['materials'];
 
-        // Ambil nilai kuis dari cookie, jika tidak ada maka default [0, 0, 0, 0]
-        $quizScores = json_decode($request->cookie("quiz_scores_$courseCode"), true) ?? [0, 0, 0, 0];
+        // Hapus tanda "-" dari course code untuk ditampilkan di Blade
+        $courseCodeWithoutDash = str_replace('-', '', $formattedCourseCode);
 
-        // Kirim data ke Blade
-        return view('matkul.course', compact('courseName', 'courseCodeFull', 'materials', 'quizScores'));
+        return view('matkul.course', compact('courseCodeWithoutDash', 'formattedCourseCode', 'courseName', 'materials'));
     }
+
 
 
     public function saveQuizScore(Request $request, $courseCode, $quizNumber)

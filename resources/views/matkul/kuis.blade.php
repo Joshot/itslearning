@@ -12,25 +12,20 @@
     <div class="w-4/5 bg-white shadow-lg rounded-2xl p-8 overflow-y-auto min-h-[700px] max-h-[700px]">
         <h2 class="text-xl font-semibold mb-4">Mulai Kuis</h2>
 
-        <form action="{{ route('kuis.submit', $courseCodeFull) }}" method="POST">
+        <form action="{{ route('kuis.submit', ['courseCode' => $courseCode, 'quizId' => $quizId]) }}" method="POST">
             @csrf
-            @foreach($questions as $index => $question)
-            <div class="space-y-4">
-                <div class="flex flex-col p-4 bg-gray-50 rounded-lg shadow-md">
-                    <p class="font-semibold text-gray-800">{{ $index + 1 }}. {{ $question->question_text }}</p>
-                    <div class="mt-3">
-                        @foreach (json_decode($question->options) as $option)
-                        <div class="flex items-center space-x-2">
-                            <input type="radio" name="answers[{{ $question->id }}]" value="{{ $option }}" class="form-radio text-blue-500">
-                            <label for="option">{{ $option }}</label>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
+            <input type="hidden" name="quiz_id" value="{{ $quizId }}">
+            @foreach ($questions as $question)
+            <p>{{ $question->question_text }}</p>
+            <label><input type="radio" name="answers[{{ $question->id }}]" value="A"> {{ $question->option_a }}</label>
+            <label><input type="radio" name="answers[{{ $question->id }}]" value="B"> {{ $question->option_b }}</label>
+            <label><input type="radio" name="answers[{{ $question->id }}]" value="C"> {{ $question->option_c }}</label>
+            <label><input type="radio" name="answers[{{ $question->id }}]" value="D"> {{ $question->option_d }}</label>
             @endforeach
-            <button type="submit" class="mt-6 p-3 bg-blue-600 text-white rounded-lg w-full">Selesai</button>
+            <button type="submit">Submit</button>
         </form>
+
+
     </div>
 </div>
 @endsection
