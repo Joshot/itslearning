@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use App\Models\Student;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
+        Student::factory()->create([
             'name' => 'Joshua Hotama (00000056899)',
             'email' => 'joshua.hotama@student.umn.ac.id',
             'password' => bcrypt('123'),

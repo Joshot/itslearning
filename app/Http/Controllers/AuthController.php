@@ -5,15 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use App\Models\Student;
 
 class AuthController extends Controller
 {
-    function index(){
+    function index() {
         return view("login/index");
     }
-    function login(Request $request){
 
-//        Session::flash('email', $request->email);
+    function login(Request $request) {
         $request->validate([
             'email' => 'required|email',
             'password' => 'required'
@@ -23,16 +23,17 @@ class AuthController extends Controller
             'password.required' => 'Password is required'
         ]);
 
-        $infologin = [
-            'email' => $request->email,
-            'password' => $request->password
-        ];
-
-        if(Auth::attempt($infologin)){
+        if (Auth::guard('student')->attempt(['email' => $request->email, 'password' => $request->password])) {
+            $request->session()->regenerate();
             return redirect('/dashboard')->with('success', 'Login Berhasil');
-        }else{
-            return redirect('/login')->with('error', 'Email Student atau Password yang dimasukkan tidak valid!');
+        } else {
+            return redirect('/login')->with('error', 'Email atau Password salah!');
         }
 
+    }
+
+    function logout() {
+        Auth::guard('student')->logout();
+        return redirect('/login')->with('success', 'Logout berhasil');
     }
 }

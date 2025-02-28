@@ -4,14 +4,31 @@
 
 @section('content')
 
+<style>
+    .tab-button {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    .tab-button.active {
+        border-bottom: 2px solid #173967;
+        color: #173967;
+    }
+</style>
+
+
 <div class="flex justify-center items-center min-h-[80vh] space-x-8">
     <div class="flex space-x-8 w-full max-w-[80%]">
         <!-- Sidebar (2 bagian) -->
         <div class="flex-[2] bg-white shadow-lg rounded-2xl p-8 h-[600px] overflow-y-auto flex flex-col">
             <h2 class="text-2xl font-semibold">Profile</h2>
             <img src="/images/profile.jpg" alt="Profile Picture" class="w-32 h-32 rounded-full mx-auto mt-4">
-            <p class="mt-4 text-center">Name: <strong>{{ Auth::user()->name ?? 'Guest' }}</strong></p>
-            <p class="mt-2 text-center">Email Student: <strong>{{ Auth::user()->email ?? 'Guest' }}</strong></p>
+            <p class="mt-4 text-center">Name: <strong>{{ Auth::guard('student')->user()->name ?? 'Guest' }}</strong></p>
+            <p class="mt-2 text-center">Email Student: <strong>{{ Auth::guard('student')->user()->email ?? 'Guest' }}</strong></p>
             <p class="mt-4 text-center">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
         </div>
 
@@ -53,7 +70,7 @@
                     $courseId = strtolower(explode('-', $course['code'])[0]); // Ambil bagian sebelum "-"
                     @endphp
 
-                    <a href="{{ url('/course#' . strtolower(str_replace('-', '', $course['code']))) }}" class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex flex-col items-center">
+                    <a href="{{ url('/course/' . strtolower(str_replace('-', '', $course['code']))) }}" class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex flex-col items-center">
                         <img src="{{ $imagePath }}" alt="Course Image" class="w-full h-32 object-cover rounded-lg">
 
                         <div class="w-full text-center mt-3">
@@ -72,7 +89,7 @@
                         $courseId = strtolower(explode('-', $course['code'])[0]);
                         @endphp
                         <li class="p-4 flex justify-between items-center hover:bg-gray-100 cursor-pointer transition rounded-md">
-                            <button onclick="location.href='/course#{{ strtolower(str_replace('-', '', $course['code'])) }}'" class="w-full text-left flex justify-between items-center">
+                            <button onclick="location.href='/course/{{ strtolower(str_replace('-', '', $course['code'])) }}'" class="w-full text-left flex justify-between items-center">
                                 <div>
                                     <h3 class="text-sm font-semibold text-gray-800">{{ $course['name'] }}</h3>
                                     <p class="text-xs text-gray-500">Course Code: {{ $course['code'] }}</p>
@@ -149,21 +166,4 @@
         });
     });
 </script>
-
-<style>
-    .tab-button {
-        flex: 1;
-        text-align: center;
-        padding: 10px;
-        cursor: pointer;
-        font-weight: bold;
-        border-bottom: 2px solid transparent;
-        transition: all 0.3s ease;
-    }
-    .tab-button.active {
-        border-bottom: 2px solid #173967;
-        color: #173967;
-    }
-</style>
-
 @endsection
