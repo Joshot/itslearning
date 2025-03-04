@@ -24,18 +24,20 @@
 
         <!-- Nilai Kuis -->
         <h3 class="text-lg font-semibold text-gray-800 mt-6">Nilai Kuis</h3>
-        <ul class="mt-2 space-y-2 w-full">
-            @if(isset($quizScores) && count($quizScores) > 0)
-            @foreach ($quizScores as $index => $score)
-            <li class="flex justify-between bg-gray-100 p-2 rounded-lg">
-                <span>Kuis {{ $index + 1 }}</span>
-                <span>{{ $score }}</span>
-            </li>
-            @endforeach
-            @else
-            <li class="text-gray-500 text-center">Belum ada nilai kuis</li>
-            @endif
-        </ul>
+        <div class="space-y-3">
+            @for ($i = 1; $i <= 4; $i++)
+            <div class="p-4 bg-gray-100 rounded-lg shadow-md">
+                <p class="text-gray-700 font-semibold">Kuis {{ $i }}</p>
+                <p class="text-gray-500">
+                    @if (isset($quizScores[$i]))
+                    <strong>{{ $quizScores[$i] }}/100</strong>
+                    @else
+                    Belum ada Nilai
+                    @endif
+                </p>
+            </div>
+            @endfor
+        </div>
     </div>
 
     <!-- Konten Utama -->
@@ -43,11 +45,17 @@
         <h2 class="text-xl font-semibold mb-4">Materi Kursus</h2>
         <div class="space-y-6">
             @foreach ($materials as $week => $material)
+            @php
+            $quizMapping = [4 => 1, 7 => 2, 10 => 3, 14 => 4];
+            $quizId = $quizMapping[$week + 1] ?? null;
+            $quizAvailable = isset($availableQuizzes[(string) $quizId]);
+            $quizCompleted = isset($quizScores[$quizId]);
+            @endphp
+
             <div class="p-6 bg-white rounded-xl shadow-md flex flex-col space-y-3 border border-gray-200">
                 <h4 class="text-lg font-semibold text-gray-800">Week {{ $week + 1 }}</h4>
                 <p class="text-gray-600">Materi Week {{ $week + 1 }}</p>
 
-                <!-- Link PDF hanya ditampilkan jika tersedia -->
                 @if (!empty($material['pdf']))
                 <a href="{{ asset($material['pdf']) }}" target="_blank" class="text-blue-600 font-semibold hover:underline">
                     Open PDF
@@ -56,31 +64,28 @@
                 <p class="text-gray-500">Materi tidak tersedia</p>
                 @endif
 
-                <!-- Penandaan Optional -->
                 @if (!empty($material['optional']))
                 <p class="text-gray-500">(Optional)</p>
                 @endif
 
                 <!-- Tampilkan Kuis jika minggu ke-4, 7, 10, atau 14 -->
-                @if (in_array($week + 1, [4, 7, 10, 14]))
-                @php
-                $quizMapping = [4 => 1, 7 => 2, 10 => 3, 14 => 4];
-                $quizId = $quizMapping[$week + 1];
-                @endphp
+                @if ($quizId)
                 <div class="p-4 bg-gray-100 rounded-lg shadow-inner">
                     <p class="text-gray-700 font-semibold">Kuis {{ $quizId }}</p>
-
-                    <a href="{{ route('kuis.start', ['courseCode' => $courseCodeWithoutDash, 'quizId' => $quizId]) }}"
+                    @if ($quizCompleted)
+                    <p class="text-gray-500">Sudah mengerjakan Kuis</p>
+                    @elseif ($quizAvailable)
+                    <a href="{{ route('kuis.start', ['courseCode' => $courseCodeWithoutDash, 'quizId' => $availableQuizzes[(string) $quizId] ?? null]) }}"
                        class="text-blue-600 font-semibold hover:underline">
                         Mulai Kuis {{ $quizId }}
                     </a>
+                    @else
+                    <p class="text-gray-500">Kuis {{ $quizId }} belum tersedia</p>
+                    @endif
                 </div>
                 @endif
 
 
-
-
-                <!-- Tempat untuk Video Materi (placeholder untuk sekarang) -->
                 <div class="p-4 bg-gray-100 rounded-lg shadow-inner">
                     <p class="text-gray-700 font-semibold">Video Materi Week {{ $week + 1 }}</p>
                     <p class="text-gray-500">Belum tersedia</p>
@@ -90,4 +95,27 @@
         </div>
     </div>
 </div>
+
 @endsection
+
+<!-- SweetAlert Ditaruh di Stack Scripts -->
+@push('scripts')
+@if(session('quiz_completed'))
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        let quizData = @json(session('quiz_completed'));
+
+        if (quizData) {
+            Swal.fire({
+                title: `Kuis ${quizData.quiz_number} Selesai!`,
+                text: `Anda mendapatkan nilai ${quizData.score}`,
+                icon: 'success',
+                confirmButtonColor: '#234e7f',
+                confirmButtonText: 'OK'
+            });
+        }
+    });
+</script>
+@endif
+@endpush

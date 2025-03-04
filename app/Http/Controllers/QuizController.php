@@ -9,6 +9,7 @@ use App\Models\Quiz;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+
 class QuizController extends Controller
 {
     /**
@@ -59,27 +60,30 @@ class QuizController extends Controller
     public function submitQuiz(Request $request, $courseCode, $quizId)
     {
         $studentId = Auth::guard('student')->id();
+
+        if (!$studentId) {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+        }
+
         $answers = $request->input('answers');
 
-        // Cek apakah mahasiswa sudah mengerjakan kuis ini
         $existingAttempt = StudentAttempt::where('student_id', $studentId)
             ->where('quiz_id', $quizId)
             ->first();
 
         if ($existingAttempt) {
-            return redirect()->route('dashboard')->with('error', 'Anda sudah mengerjakan kuis ini.');
+            return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
+                ->with('error', 'Anda sudah mengerjakan kuis ini.');
         }
 
-        // Buat attempt baru
         $attempt = new StudentAttempt();
         $attempt->student_id = $studentId;
         $attempt->quiz_id = $quizId;
         $attempt->score = 0;
         $attempt->save();
 
-        // Menyimpan jawaban mahasiswa dan menghitung kesalahan per kategori
         $score = 0;
-        $errors = ['easy' => 0, 'medium' => 0, 'hard' => 0];
+        $totalQuestions = count($answers);
 
         foreach ($answers as $questionId => $selectedOption) {
             $question = Question::find($questionId);
@@ -88,11 +92,8 @@ class QuizController extends Controller
             $isCorrect = $question->correct_option == $selectedOption;
             if ($isCorrect) {
                 $score++;
-            } else {
-                $errors[$question->difficulty]++;
             }
 
-            // Simpan jawaban mahasiswa
             StudentAnswer::create([
                 'attempt_id' => $attempt->id,
                 'question_id' => $questionId,
@@ -101,14 +102,16 @@ class QuizController extends Controller
             ]);
         }
 
-        // Update skor mahasiswa
-        $attempt->score = $score;
+        $finalScore = ($score / $totalQuestions) * 100;
+        $attempt->score = $finalScore;
         $attempt->save();
 
-        return redirect()->route('kuis.start', ['courseCode' => $courseCode, 'quizId' => $quizId])
-            ->with('success', "Kuis selesai! Skor Anda: $score. Kesalahan: Easy ($errors[easy]), Medium ($errors[medium]), Hard ($errors[hard])");
+        return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
+            ->with('quiz_completed', [
+                'quiz_number' => $quizId,
+                'score' => round($finalScore, 2),
+            ]);
     }
-
 
 
     /**

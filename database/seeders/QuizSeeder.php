@@ -11,14 +11,28 @@ class QuizSeeder extends Seeder
     {
         Quiz::create([
             'course_code' => 'IF540-D',
-            'title' => 'Kuis 1',
+            'title' => '1',
             'start_time' => now(),
-            'end_time' => now()->addHours(2),
+            'end_time' => now()->addDays(7)->addHours(2),
         ]);
 
         Quiz::create([
             'course_code' => 'IF540-D',
-            'title' => 'Kuis 2',
+            'title' => '2',
+            'start_time' => now()->addDays(7),
+            'end_time' => now()->addDays(7)->addHours(2),
+        ]);
+
+        Quiz::create([
+            'course_code' => 'IF540-D',
+            'title' => '3',
+            'start_time' => now()->addDays(7),
+            'end_time' => now()->addDays(7)->addHours(2),
+        ]);
+
+        Quiz::create([
+            'course_code' => 'IF540-D',
+            'title' => '4',
             'start_time' => now()->addDays(7),
             'end_time' => now()->addDays(7)->addHours(2),
         ]);

@@ -9,11 +9,17 @@ use App\Models\Student;
 
 class AuthController extends Controller
 {
-    function index() {
+    /**
+     * Menampilkan halaman login
+     */
+    public function index() {
         return view("login/index");
     }
 
-    function login(Request $request) {
+    /**
+     * Proses login student
+     */
+    public function login(Request $request) {
         $request->validate([
             'email' => 'required|email',
             'password' => 'required'
@@ -27,13 +33,18 @@ class AuthController extends Controller
             $request->session()->regenerate();
             return redirect('/dashboard')->with('success', 'Login Berhasil');
         } else {
-            return redirect('/login')->with('error', 'Email atau Password salah!');
+            return redirect('/')->with('error', 'Email atau Password salah!');
         }
-
     }
 
-    function logout() {
+    /**
+     * Logout student
+     */
+    public function logout(Request $request) {
         Auth::guard('student')->logout();
-        return redirect('/login')->with('success', 'Logout berhasil');
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/')->with('success', 'Logout berhasil');
     }
 }

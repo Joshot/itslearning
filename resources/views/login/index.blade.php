@@ -22,7 +22,7 @@
         @endif
 
 
-        <form action="/login" method="GET" class="w-full" onsubmit="return validateForm()">
+        <form action="{{ route('login.process') }}" method="POST" class="w-full" onsubmit="return validateForm()">
             @csrf
             <div class="mb-4">
                 <label for="email" style="color: #54606b" class="block">Email Student</label>
@@ -34,6 +34,7 @@
             </div>
             <button type="submit" class="w-full text-white py-2 rounded hover:bg-blue-600" style="background: #173967">Login</button>
         </form>
+
     </div>
 </div>
 

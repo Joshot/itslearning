@@ -12,6 +12,8 @@
 
 <main class="flex-grow p-8">
     @yield('content')
+    @stack('scripts')
+
 </main>
 
 @include('layouts.footer')

@@ -1,4 +1,4 @@
-<nav style="background: #173967" class="text-white p-2 flex justify-between items-center">
+<nav style="background: #234e7f" class="text-white p-2 flex justify-between items-center">
     <!-- Logo -->
     <div>
         <img src="/images/logo_kecil_putih.png" alt="Logo" class="h-12 pl-6">
