@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Lecturer Dashboard')
+@section('title', 'Home Page')
 
 @section('content')
 
@@ -20,6 +20,7 @@
     }
 </style>
 
+
 <div class="flex justify-center items-center min-h-[80vh] space-x-8">
     <div class="flex space-x-8 w-full max-w-[80%]">
         <!-- Sidebar (2 bagian) -->
@@ -27,7 +28,7 @@
             <h2 class="text-2xl font-semibold">Profile</h2>
             <img src="/images/profile.jpg" alt="Profile Picture" class="w-32 h-32 rounded-full mx-auto mt-4">
             <p class="mt-4 text-center">Name: <strong>{{ Auth::guard('lecturer')->user()->name ?? 'Guest' }}</strong></p>
-            <p class="mt-2 text-center">Email Lecturer: <strong>{{ Auth::guard('lecturer')->user()->email ?? 'Guest' }}</strong></p>
+            <p class="mt-2 text-center">Email Lecture: <strong>{{ Auth::guard('lecturer')->user()->email ?? 'Guest' }}</strong></p>
             <p class="mt-4 text-center">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
         </div>
 
@@ -41,7 +42,7 @@
             <div id="content-course" class="tab-content block flex flex-col items-center">
                 @php
                 $courses = config('courses');
-                $imageCount = 6;
+                $imageCount = 6
                 @endphp
 
                 <!-- Dropdown Toggle -->
@@ -71,6 +72,7 @@
 
                     <a href="{{ url('/course/' . strtolower(str_replace('-', '', $course['code']))) }}" class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex flex-col items-center">
                         <img src="{{ $imagePath }}" alt="Course Image" class="w-full h-32 object-cover rounded-lg">
+
                         <div class="w-full text-center mt-3">
                             <h3 class="text-base font-semibold text-gray-800">{{ $course['name'] }}</h3>
                             <p class="text-xs text-gray-500 mt-1">Course Code: {{ $course['code'] }}</p>
@@ -97,13 +99,17 @@
                         @endforeach
                     </ul>
                 </div>
+
+
             </div>
+
+
 
             <div id="content-timeline" class="tab-content hidden flex flex-col items-center justify-center h-full">
                 <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
                 </svg>
-                <p class="mt-2 text-gray-500">No upcoming activities due for your courses</p>
+                <p class="mt-2 text-gray-500">No upcoming activities due</p>
             </div>
         </div>
     </div>

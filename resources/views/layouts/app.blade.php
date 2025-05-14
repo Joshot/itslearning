@@ -3,10 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title')</title>
-    <link href="{{ asset('css/app.css') }}" rel="stylesheet">
+    <title>@yield('title', 'UMN Portal')</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100">
+<body style="background-image: url('/images/background_logo.jpg'); background-size: cover; background-position: center;" class="flex flex-col min-h-screen">
 <nav style="background: #234e7f" class="text-white p-2 flex justify-between items-center">
     <div>
         <img src="/images/logo_kecil_putih.png" alt="Logo" class="h-12 pl-6">
@@ -41,10 +41,12 @@
     </div>
 </nav>
 
-<main class="py-4">
+<main class="flex-grow p-8">
     @yield('content')
+    @stack('scripts')
 </main>
 
-@stack('scripts')
+@include('layouts.footer')
+
 </body>
 </html>

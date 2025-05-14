@@ -12,7 +12,7 @@
     <div class="w-full md:w-1/4 bg-white flex flex-col justify-center items-center p-8">
         <img src="/images/login_kecil_warna.png" alt="Logo" class="mb-4">
         <hr class="w-full border-gray-300 mb-4">
-        <h1 style="color: #54606b" class="text-2xl mb-6">Sign In Lecturer</h1>
+        <h1 style="color: #54606b" class="font-bold text-2xl mb-6">Sign In Lecturer</h1>
 
         <!-- Error Notification -->
         @if (session('error') || $errors->any())
