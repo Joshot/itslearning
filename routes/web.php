@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\LecturerAuthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuizController;
@@ -14,15 +15,21 @@ Route::middleware(['auth:student'])->group(function () {
 Route::post('/questions', [QuestionController::class, 'store']);
 Route::get('/questions', [QuestionController::class, 'index']);
 
+
 // Redirect '/' ke '/login'
 Route::get('/', function () {
     return redirect('/login');
 });
-Route::get('/login', [AuthController::class, 'index'])->name('login'); // Halaman login
-Route::post('/login', [AuthController::class, 'login'])->name('login.process'); // Proses login
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout'); // Logout
 
+// Student Authentication
+Route::get('/login', [AuthController::class, 'index'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.process');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Lecturer Authentication
+Route::get('/lecturer/login', [LecturerAuthController::class, 'showLoginForm'])->name('lecturer.login');
+Route::post('/lecturer/login', [LecturerAuthController::class, 'login'])->name('lecturer.login.process');
+Route::post('/lecturer/logout', [LecturerAuthController::class, 'logout'])->name('lecturer.logout');
 
 Route::middleware(['auth:student'])->group(function () {
     Route::get('/dashboard', function () {
@@ -30,6 +37,11 @@ Route::middleware(['auth:student'])->group(function () {
     })->name('dashboard');
 });
 
+Route::middleware(['auth:lecturer'])->group(function () {
+    Route::get('/lecturer/dashboard', function () {
+        return view('lecture.dashboard');
+    })->name('lecturer.dashboard');
+});
 
 
 Route::get('/course/{courseCode}', [CourseController::class, 'show'])->name('course.show');

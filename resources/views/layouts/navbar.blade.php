@@ -1,3 +1,4 @@
+<!-- Navigation Bar -->
 <nav style="background: #234e7f" class="text-white p-2 flex justify-between items-center">
     <!-- Logo -->
     <div>
@@ -19,5 +20,11 @@
         </div>
         <!-- Nama Pengguna -->
         <span class="text-white font-semibold">{{ Auth::guard('student')->user()->name ?? 'Guest' }}</span>
+
+        <!-- Logout Link with JavaScript -->
+        <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="text-white text-xs">Logout</a>
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
     </div>
 </nav>

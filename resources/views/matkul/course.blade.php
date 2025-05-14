@@ -73,7 +73,7 @@
                 <div class="p-4 bg-gray-100 rounded-lg shadow-inner">
                     <p class="text-gray-700 font-semibold">Kuis {{ $quizId }}</p>
                     @if ($quizCompleted)
-                    <p class="text-gray-500">Sudah mengerjakan Kuis</p>
+                    <p class="text-gray-500">Sudah mengerjakan Kuis (Nilai: {{ $quizScores[$quizId] }}/100)</p>
                     @elseif ($quizAvailable)
                     <a href="{{ route('kuis.start', ['courseCode' => $courseCodeWithoutDash, 'quizId' => $availableQuizzes[(string) $quizId] ?? null]) }}"
                        class="text-blue-600 font-semibold hover:underline">
@@ -84,7 +84,6 @@
                     @endif
                 </div>
                 @endif
-
 
                 <div class="p-4 bg-gray-100 rounded-lg shadow-inner">
                     <p class="text-gray-700 font-semibold">Video Materi Week {{ $week + 1 }}</p>
@@ -98,7 +97,6 @@
 
 @endsection
 
-<!-- SweetAlert Ditaruh di Stack Scripts -->
 @push('scripts')
 @if(session('quiz_completed'))
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -115,6 +113,20 @@
                 confirmButtonText: 'OK'
             });
         }
+    });
+</script>
+@endif
+@if(session('error'))
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        Swal.fire({
+            title: 'Oops!',
+            text: '{{ session('error') }}',
+            icon: 'error',
+            confirmButtonColor: '#234e7f',
+            confirmButtonText: 'OK'
+        });
     });
 </script>
 @endif

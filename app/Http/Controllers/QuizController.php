@@ -15,6 +15,36 @@ class QuizController extends Controller
     /**
      * Menampilkan halaman kuis dan mengambil soal dari database berdasarkan algoritma CAT.
      */
+    public function show($courseCode)
+    {
+        // Load course data
+        $course = Course::where('course_code', $courseCode)->firstOrFail();
+        $courseName = $course->name;
+        $formattedCourseCode = $course->course_code;
+
+        // Load materials (adjust based on your actual logic)
+        $materials = //* Logic to get course materials */;
+
+        // Load available quizzes (adjust based on your logic)
+        $availableQuizzes = //* Logic to get available quizzes */;
+
+        // Get quiz scores for the authenticated student
+        $studentId = Auth::guard('student')->id();
+        $quizScores = StudentAttempt::where('student_id', $studentId)
+            ->whereIn('quiz_id', [1, 2, 3, 4]) // Assuming quiz IDs are 1, 2, 3, 4
+            ->pluck('score', 'quiz_id')
+            ->toArray();
+
+        return view('course', [
+            'courseName' => $courseName,
+            'formattedCourseCode' => $formattedCourseCode,
+            'courseCodeWithoutDash' => str_replace('-', '', $courseCode),
+            'materials' => $materials,
+            'availableQuizzes' => $availableQuizzes,
+            'quizScores' => $quizScores,
+        ]);
+    }
+
     public function startQuiz($courseCode, $quizId)
     {
         $studentId = auth()->id();
