@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $courseName ?? 'Course Page')
+@section('title', $course->course_name ?? 'Course Page')
 
 @section('content')
 <div class="flex justify-center items-start min-h-[80vh] space-x-6 p-4">
@@ -8,7 +8,7 @@
     <div class="w-1/5 bg-white shadow-lg rounded-2xl min-h-[700px] max-h-[700px] p-4 sticky top-4 h-fit flex flex-col">
         <div class="flex justify-between w-full items-center">
             <!-- Tombol Back -->
-            <a href="{{ url('/dashboard') }}" class="p-3 rounded-full transition shadow-md hover:shadow-lg">
+            <a href="{{ url('/dashboard') }}" class="p-3 rounded-full transition shadow-md hover:shadow-lg" data-no-prevent>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
@@ -20,7 +20,7 @@
         </div>
 
         <!-- Nama Course -->
-        <h2 class="text-lg font-semibold text-gray-800 text-center mt-4">{{ $courseName ?? 'Unnamed Course' }}</h2>
+        <h2 class="text-lg font-semibold text-gray-800 text-center mt-4">{{ $course->course_name ?? 'Unnamed Course' }}</h2>
 
         <!-- Nilai Kuis -->
         <h3 class="text-lg font-semibold text-gray-800 mt-6">Nilai Kuis</h3>
@@ -73,9 +73,9 @@
                 <div class="p-4 bg-gray-100 rounded-lg shadow-inner">
                     <p class="text-gray-700 font-semibold">Kuis {{ $quizId }}</p>
                     @if ($quizCompleted)
-                    <p class="text-gray-500">Sudah mengerjakan Kuis (Nilai: {{ $quizScores[$quizId] }}/100)</p>
+                    <p class="text-gray-500">Sudah mengerjakan Kuis</p>
                     @elseif ($quizAvailable)
-                    <a href="{{ route('kuis.start', ['courseCode' => $courseCodeWithoutDash, 'quizId' => $availableQuizzes[(string) $quizId] ?? null]) }}"
+                    <a href="{{ route('kuis.start', ['courseCode' => $formattedCourseCode, 'quizId' => $availableQuizzes[(string) $quizId] ?? null]) }}"
                        class="text-blue-600 font-semibold hover:underline">
                         Mulai Kuis {{ $quizId }}
                     </a>
@@ -94,16 +94,15 @@
         </div>
     </div>
 </div>
-
 @endsection
 
+<!-- SweetAlert Ditaruh di Stack Scripts -->
 @push('scripts')
 @if(session('quiz_completed'))
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         let quizData = @json(session('quiz_completed'));
-
         if (quizData) {
             Swal.fire({
                 title: `Kuis ${quizData.quiz_number} Selesai!`,

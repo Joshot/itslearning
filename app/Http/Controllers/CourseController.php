@@ -2,32 +2,47 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Course;
+use App\Models\CourseMaterial;
 use App\Models\Quiz;
 use App\Models\StudentAnswer;
 use App\Models\StudentAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CourseController extends Controller
 {
     public function show($courseCode)
     {
+        Log::info("Accessing course page", ['courseCode' => $courseCode]);
+
         // Format kode kursus dari URL (if540d menjadi IF540-D)
         $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
 
-        // Ambil daftar kursus dari konfigurasi
-        $courses = config('courses');
-
-        // Cari kursus berdasarkan kode yang diformat
-        $course = collect($courses)->firstWhere('code', $formattedCourseCode);
+        // Ambil kursus dari database
+        $course = Course::where('course_code', $formattedCourseCode)->first();
 
         if (!$course) {
+            Log::error("Course not found for code: {$formattedCourseCode}");
             return redirect()->route('dashboard')->with('error', 'Course not found');
         }
 
-        // Ambil nama kursus dan materi
-        $courseName = $course['name'];
-        $materials = $course['materials'];
+        // Ambil materi kursus
+        $courseMaterials = CourseMaterial::where('course_id', $course->id)->get();
+
+        // Log data untuk debugging
+        Log::info("Course materials retrieved", ['courseMaterials' => $courseMaterials->toArray()]);
+
+        // Inisialisasi materials sebagai array untuk minggu 1-14
+        $materials = [];
+        for ($week = 0; $week < 14; $week++) {
+            $material = $courseMaterials->firstWhere('week', $week + 1);
+            $materials[$week] = [
+                'pdf' => $material && $material->pdf_path ? 'storage/' . $material->pdf_path : null,
+                'optional' => $material ? (bool) $material->is_optional : false,
+            ];
+        }
 
         // Hapus tanda "-" dari course code untuk ditampilkan di Blade
         $courseCodeWithoutDash = str_replace('-', '', $formattedCourseCode);
@@ -38,12 +53,13 @@ class CourseController extends Controller
         // Buat mapping antara title kuis (1,2,3,4) dengan ID sebenarnya
         $availableQuizzes = [];
         foreach ($quizzes as $quiz) {
-            $availableQuizzes[(int)$quiz->title] = $quiz->title;
+            $availableQuizzes[(int)$quiz->title] = $quiz->id;
         }
 
         // Ambil nilai kuis dari student_attempts berdasarkan student_answers
         $quizScores = [];
-        $studentId = Auth::id();
+        $studentId = Auth::guard('student')->id();
+        Log::info("Student ID", ['studentId' => $studentId]);
 
         for ($i = 1; $i <= 4; $i++) {
             if (!isset($availableQuizzes[$i])) {
@@ -53,7 +69,7 @@ class CourseController extends Controller
 
             $quizId = $availableQuizzes[$i];
 
-            // Cari attempt berdasarkan student_id dan quiz_id yang sesuai
+            // Cari attempt berdasarkan student_id dan quiz_id
             $attempt = StudentAttempt::where('student_id', $studentId)
                 ->where('quiz_id', $quizId)
                 ->first();
@@ -64,18 +80,33 @@ class CourseController extends Controller
                     ->where('is_correct', true)
                     ->count();
 
-                // Ambil total jumlah soal yang dikerjakan
+                // Ambil total jumlah soal
                 $totalQuestions = StudentAnswer::where('attempt_id', $attempt->id)->count();
 
-                // Hitung skor jika ada soal yang dikerjakan
+                // Hitung skor
                 $score = $totalQuestions > 0 ? round(($correctAnswers / $totalQuestions) * 100, 2) : 0;
                 $quizScores[$i] = $score;
             } else {
-                $quizScores[$i] = null; // Jika belum ada attempt
+                $quizScores[$i] = null;
             }
         }
 
-        return view('matkul.course', compact('courseCodeWithoutDash', 'formattedCourseCode', 'courseName', 'materials', 'quizScores', 'availableQuizzes'));
+        Log::info("Course data for {$formattedCourseCode}", [
+            'courseName' => $course->course_name,
+            'formattedCourseCode' => $formattedCourseCode,
+            'materials' => $materials,
+            'quizScores' => $quizScores,
+            'availableQuizzes' => $availableQuizzes,
+        ]);
+
+        return view('matkul.course', compact(
+            'courseCodeWithoutDash',
+            'formattedCourseCode',
+            'course',
+            'materials',
+            'quizScores',
+            'availableQuizzes'
+        ));
     }
 
 

@@ -20,7 +20,6 @@
     }
 </style>
 
-
 <div class="flex justify-center items-center min-h-[80vh] space-x-8">
     <div class="flex space-x-8 w-full max-w-[80%]">
         <!-- Sidebar (2 bagian) -->
@@ -41,8 +40,14 @@
 
             <div id="content-course" class="tab-content block flex flex-col items-center">
                 @php
-                $courses = config('courses');
-                $imageCount = 6
+                use App\Models\Course;
+                $courses = Course::all()->map(function ($course) {
+                return [
+                'code' => $course->course_code,
+                'name' => $course->course_name,
+                ];
+                })->toArray();
+                $imageCount = 6;
                 @endphp
 
                 <!-- Dropdown Toggle -->
@@ -67,12 +72,11 @@
                     @php
                     $imageNumber = ($index % $imageCount) + 1;
                     $imagePath = asset("/images/0$imageNumber.png");
-                    $courseId = strtolower(explode('-', $course['code'])[0]); // Ambil bagian sebelum "-"
+                    $courseId = strtolower(str_replace('-', '', $course['code']));
                     @endphp
 
-                    <a href="{{ url('/course/' . strtolower(str_replace('-', '', $course['code']))) }}" class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex flex-col items-center">
+                    <a href="{{ url('/course/' . $courseId) }}" class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex flex-col items-center" data-no-prevent>
                         <img src="{{ $imagePath }}" alt="Course Image" class="w-full h-32 object-cover rounded-lg">
-
                         <div class="w-full text-center mt-3">
                             <h3 class="text-base font-semibold text-gray-800">{{ $course['name'] }}</h3>
                             <p class="text-xs text-gray-500 mt-1">Course Code: {{ $course['code'] }}</p>
@@ -86,24 +90,20 @@
                     <ul class="bg-white rounded-lg shadow-md divide-y">
                         @foreach ($courses as $course)
                         @php
-                        $courseId = strtolower(explode('-', $course['code'])[0]);
+                        $courseId = strtolower(str_replace('-', '', $course['code']));
                         @endphp
                         <li class="p-4 flex justify-between items-center hover:bg-gray-100 cursor-pointer transition rounded-md">
-                            <button onclick="location.href='/course/{{ strtolower(str_replace('-', '', $course['code'])) }}'" class="w-full text-left flex justify-between items-center">
+                            <a href="{{ url('/course/' . $courseId) }}" class="w-full text-left flex justify-between items-center" data-no-prevent>
                                 <div>
                                     <h3 class="text-sm font-semibold text-gray-800">{{ $course['name'] }}</h3>
                                     <p class="text-xs text-gray-500">Course Code: {{ $course['code'] }}</p>
                                 </div>
-                            </button>
+                            </a>
                         </li>
                         @endforeach
                     </ul>
                 </div>
-
-
             </div>
-
-
 
             <div id="content-timeline" class="tab-content hidden flex flex-col items-center justify-center h-full">
                 <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

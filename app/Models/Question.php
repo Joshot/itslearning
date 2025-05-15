@@ -14,6 +14,6 @@ class Question extends Model
     // Relasi dengan tabel Quiz
     public function quiz()
     {
-        return $this->belongsTo(Quiz::class);
+        return $this->belongsTo(Quiz::class, 'quiz_id');
     }
 }
