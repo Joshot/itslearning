@@ -31,6 +31,7 @@
             @php
             $quizWeek = in_array($week + 1, [4, 7, 10, 14]) ? ($week + 1) : null;
             $quiz = $quizWeek ? ($quizzes[$quizWeek] ?? null) : null;
+            $taskNumber = $quizWeek ? (int) ($quizWeek / 3.5) : null; // 4->1, 7->2, 10->3, 14->4
             @endphp
 
             <div class="p-6 bg-white rounded-xl shadow-md flex flex-col space-y-3 border border-gray-200">
@@ -38,7 +39,7 @@
                 <p class="text-gray-600">Materi Week {{ $week + 1 }}</p>
 
                 <!-- Form Upload Materi -->
-                <form action="{{ route('lecturer.course.material.store', ['courseCode' => $formattedCourseCode]) }}" method="POST" enctype="multipart/form-data" class="space-y-3">
+                <form action="{{ route('lecturer.course.material.store', ['courseCode' => $courseCodeWithoutDash]) }}" method="POST" enctype="multipart/form-data" class="space-y-3">
                     @csrf
                     <input type="hidden" name="week" value="{{ $week + 1 }}">
                     <div>
@@ -80,10 +81,10 @@
                 <p class="text-gray-500">(Optional)</p>
                 @endif
 
-                <!-- Bank Soal untuk Kuis -->
+                <!-- Bank Soal untuk Tugas -->
                 @if ($quiz)
                 <div class="p-4 bg-gray-100 rounded-lg shadow-inner">
-                    <p class="text-gray-700 font-semibold">Kuis {{ $quiz['title'] }}</p>
+                    <p class="text-gray-700 font-semibold">{{ $quiz['title'] }}</p>
                     <p class="text-gray-600">Total Soal: {{ $quiz['total_questions'] }}</p>
                     <p class="text-gray-600">Easy: {{ $quiz['easy_questions'] }}</p>
                     <p class="text-gray-600">Medium: {{ $quiz['medium_questions'] }}</p>
@@ -91,11 +92,16 @@
                 </div>
                 @endif
 
-                <!-- Tombol Buat Tugas -->
-                @if ($quizWeek)
-                <button onclick="alert('Fitur Buat Tugas belum diimplementasikan')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                    Buat Tugas
-                </button>
+                <!-- Form Buat Tugas -->
+                @if ($quizWeek && !$quiz)
+                <form id="create-task-form-{{ $week + 1 }}" action="{{ route('lecturer.course.quiz.create', ['courseCode' => $courseCodeWithoutDash]) }}" method="POST" class="mt-3">
+                    @csrf
+                    <input type="hidden" name="week" value="{{ $week + 1 }}">
+                    <input type="hidden" name="title" id="task-title-{{ $week + 1 }}">
+                    <button type="button" onclick="confirmCreateTask({{ $taskNumber }}, {{ $week + 1 }})" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        Buat Tugas
+                    </button>
+                </form>
                 @endif
             </div>
             @endforeach
@@ -103,10 +109,51 @@
     </div>
 </div>
 
-<!-- SweetAlert untuk Notifikasi -->
+<!-- SweetAlert untuk Notifikasi dan Konfirmasi -->
 @push('scripts')
-@if(session('success'))
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function confirmCreateTask(taskNumber, week) {
+        Swal.fire({
+            title: 'Konfirmasi',
+            text: `Apakah yakin ingin membuat Tugas ${taskNumber}?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#234e7f',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yakin',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Masukkan Nama Materi Tugas',
+                    input: 'text',
+                    inputPlaceholder: 'Contoh: HTML Dasar',
+                    inputAttributes: {
+                        autocapitalize: 'off'
+                    },
+                    showCancelButton: true,
+                    confirmButtonColor: '#234e7f',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Simpan',
+                    cancelButtonText: 'Batal',
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return 'Judul tugas tidak boleh kosong!';
+                        }
+                    }
+                }).then((inputResult) => {
+                    if (inputResult.isConfirmed) {
+                        const titleInput = document.getElementById(`task-title-${week}`);
+                        titleInput.value = `Tugas ${taskNumber}, ${inputResult.value}`;
+                        document.getElementById(`create-task-form-${week}`).submit();
+                    }
+                });
+            }
+        });
+    }
+</script>
+@if(session('success'))
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         Swal.fire({
@@ -120,7 +167,6 @@
 </script>
 @endif
 @if(session('error'))
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         Swal.fire({

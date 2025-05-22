@@ -47,8 +47,10 @@ class LecturerCourseController extends Controller
                 $query->select('id', 'quiz_id', 'difficulty');
             }])
             ->get()
-            ->mapWithKeys(function ($quiz, $index) {
-                $week = [4, 7, 10, 14][$index] ?? null;
+            ->mapWithKeys(function ($quiz) {
+                // Map minggu berdasarkan title (Tugas 1 -> minggu 4, Tugas 2 -> minggu 7, dst.)
+                $taskNumber = (int) preg_replace('/Tugas (\d+),.*/', '$1', $quiz->title);
+                $week = [1 => 4, 2 => 7, 3 => 10, 4 => 14][$taskNumber] ?? null;
                 if ($week) {
                     return [$week => [
                         'id' => $quiz->id,
@@ -88,7 +90,8 @@ class LecturerCourseController extends Controller
             'video_url' => 'nullable|url',
         ]);
 
-        $course = Course::where('course_code', $courseCode)->firstOrFail();
+        $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
+        $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
         $week = $request->week;
 
         // Proses upload PDF
@@ -108,5 +111,69 @@ class LecturerCourseController extends Controller
         );
 
         return redirect()->back()->with('success', 'Material updated successfully');
+    }
+
+    public function createQuiz(Request $request, $courseCode)
+    {
+        $request->validate([
+            'week' => 'required|integer|in:4,7,10,14',
+            'title' => 'required|string|max:255',
+        ]);
+
+        $week = $request->week;
+        $title = $request->title;
+        $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
+        $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+
+        // Cek apakah kuis untuk minggu ini sudah ada
+        $taskNumber = (int) ($week / 3.5);
+        if (Quiz::where('course_code', $formattedCourseCode)->where('title', 'like', "Tugas {$taskNumber},%")->exists()) {
+            return redirect()->back()->with('error', 'Tugas untuk minggu ini sudah ada.');
+        }
+
+        // Buat kuis baru
+        $quiz = Quiz::create([
+            'course_code' => $formattedCourseCode,
+            'title' => $title,
+            'start_time' => now(),
+            'end_time' => now()->addDays(7),
+        ]);
+
+        // Pilih soal acak: 4 easy, 3 medium, 3 hard
+        $easyQuestions = Question::where('difficulty', 'easy')
+            ->inRandomOrder()
+            ->take(4)
+            ->get();
+        $mediumQuestions = Question::where('difficulty', 'medium')
+            ->inRandomOrder()
+            ->take(3)
+            ->get();
+        $hardQuestions = Question::where('difficulty', 'hard')
+            ->inRandomOrder()
+            ->take(3)
+            ->get();
+
+        // Validasi jumlah soal
+        if ($easyQuestions->count() < 4 || $mediumQuestions->count() < 3 || $hardQuestions->count() < 3) {
+            $quiz->delete();
+            return redirect()->back()->with('error', 'Tidak cukup soal dengan tingkat kesulitan yang diperlukan.');
+        }
+
+        // Perbarui quiz_id untuk soal yang dipilih
+        $questions = $easyQuestions->merge($mediumQuestions)->merge($hardQuestions);
+        foreach ($questions as $question) {
+            $question->update(['quiz_id' => $quiz->id]);
+        }
+
+        Log::info("Quiz created for course {$formattedCourseCode}", [
+            'quiz_id' => $quiz->id,
+            'title' => $quiz->title,
+            'total_questions' => $questions->count(),
+            'easy_questions' => $easyQuestions->count(),
+            'medium_questions' => $mediumQuestions->count(),
+            'hard_questions' => $hardQuestions->count(),
+        ]);
+
+        return redirect()->back()->with('success', "Tugas berhasil dibuat: {$title} dengan 10 soal (4 easy, 3 medium, 3 hard).");
     }
 }

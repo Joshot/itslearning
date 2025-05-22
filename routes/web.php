@@ -35,6 +35,7 @@ Route::middleware(['auth:lecturer'])->group(function () {
     })->name('lecturer.dashboard');
     Route::get('/lecturer/course/{courseCode}', [LecturerCourseController::class, 'show'])->name('lecturer.course.show');
     Route::post('/lecturer/course/{courseCode}/material', [LecturerCourseController::class, 'storeMaterial'])->name('lecturer.course.material.store');
+    Route::post('/lecturer/course/{courseCode}/quiz', [LecturerCourseController::class, 'createQuiz'])->name('lecturer.course.quiz.create');
 });
 
 Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');

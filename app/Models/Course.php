@@ -12,4 +12,14 @@ class Course extends Model
     {
         return $this->hasMany(CourseMaterial::class);
     }
+
+    public function quizzes()
+    {
+        return $this->hasMany(Quiz::class, 'course_code', 'course_code');
+    }
+
+    public function assignments()
+    {
+        return $this->hasMany(CourseAssignment::class, 'course_code', 'course_code');
+    }
 }
