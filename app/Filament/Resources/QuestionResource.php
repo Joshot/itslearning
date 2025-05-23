@@ -21,9 +21,12 @@ class QuestionResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('quiz_id')
-                    ->relationship('quiz', 'title')
+                    ->relationship('quiz', 'title', fn ($query) => $query->whereHas('course'))
                     ->searchable()
-                    ->required(),
+                    ->required()
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->title . ' (' . ($record->course?->course_name ?? 'No Course') . ')')
+                    ->default(null)
+                    ->reactive(),
                 Forms\Components\Textarea::make('question_text')
                     ->required()
                     ->maxLength(65535)
@@ -65,7 +68,13 @@ class QuestionResource extends Resource
                 Tables\Columns\TextColumn::make('quiz.title')
                     ->label('Quiz')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->default('-'),
+                Tables\Columns\TextColumn::make('quiz.course.course_name')
+                    ->label('Course')
+                    ->searchable()
+                    ->sortable()
+                    ->default('-'),
                 Tables\Columns\TextColumn::make('question_text')
                     ->searchable()
                     ->limit(50),
@@ -91,8 +100,11 @@ class QuestionResource extends Resource
                         'hard' => 'Hard',
                     ]),
                 Tables\Filters\SelectFilter::make('quiz_id')
-                    ->relationship('quiz', 'title')
+                    ->relationship('quiz', 'title', fn ($query) => $query->whereHas('course'))
                     ->label('Quiz'),
+                Tables\Filters\SelectFilter::make('course_code')
+                    ->relationship('quiz.course', 'course_name')
+                    ->label('Course'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

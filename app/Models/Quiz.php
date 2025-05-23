@@ -11,14 +11,13 @@ class Quiz extends Model
 
     protected $fillable = ['course_code', 'title', 'start_time', 'end_time'];
 
-    protected $casts = [
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
-    ];
+    public function course()
+    {
+        return $this->belongsTo(Course::class, 'course_code', 'course_code');
+    }
 
     public function questions()
     {
         return $this->hasMany(Question::class, 'quiz_id');
     }
-
 }

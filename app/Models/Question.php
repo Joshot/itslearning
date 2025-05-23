@@ -11,9 +11,8 @@ class Question extends Model
 
     protected $fillable = ['question_text', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option', 'quiz_id', 'difficulty'];
 
-    // Relasi dengan tabel Quiz
     public function quiz()
     {
-        return $this->belongsTo(Quiz::class, 'quiz_id');
+        return $this->belongsTo(Quiz::class, 'quiz_id', 'id');
     }
 }

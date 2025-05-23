@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Pages\CourseAssignments;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\LecturerAuthController;
@@ -40,3 +41,8 @@ Route::middleware(['auth:lecturer'])->group(function () {
 
 Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');
 Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
+
+Route::get('/admin/course-assignments/{course_code}', CourseAssignments::class)
+    ->name('filament.admin.pages.course-assignments')
+    ->middleware(['auth', 'verified']);
+

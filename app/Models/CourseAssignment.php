@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CourseAssignment extends Model
 {
-    protected $fillable = ['course_code', 'user_id', 'role'];
+    use HasFactory;
+
+    protected $fillable = ['course_code', 'user_id'];
 
     public function course()
     {
@@ -15,6 +18,6 @@ class CourseAssignment extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 }
