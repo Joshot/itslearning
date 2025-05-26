@@ -20,6 +20,10 @@ class StudentResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\TextInput::make('nim')
+                    ->required()
+                    ->numeric()
+                    ->unique(ignoreRecord: true),
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -32,6 +36,18 @@ class StudentResource extends Resource
                     ->required()
                     ->minLength(6)
                     ->visibleOn('create'),
+                Forms\Components\TextInput::make('major')
+                    ->required()
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('angkatan')
+                    ->required()
+                    ->numeric()
+                    ->minValue(2000)
+                    ->maxValue(date('Y')),
+                Forms\Components\FileUpload::make('profile_photo')
+                    ->image()
+                    ->directory('profile-photos')
+                    ->default('/images/profile.jpg'),
             ]);
     }
 
@@ -39,11 +55,19 @@ class StudentResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('nim')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('major')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('angkatan')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

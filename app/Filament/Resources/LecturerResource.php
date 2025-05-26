@@ -20,6 +20,10 @@ class LecturerResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\TextInput::make('nidn')
+                    ->required()
+                    ->numeric()
+                    ->unique(ignoreRecord: true),
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -32,6 +36,16 @@ class LecturerResource extends Resource
                     ->required()
                     ->minLength(6)
                     ->visibleOn('create'),
+                Forms\Components\TextInput::make('major')
+                    ->required()
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('mata_kuliah')
+                    ->required()
+                    ->maxLength(255),
+                Forms\Components\FileUpload::make('profile_photo')
+                    ->image()
+                    ->directory('profile-photos')
+                    ->default('/images/profile.jpg'),
             ]);
     }
 
@@ -39,10 +53,19 @@ class LecturerResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('nidn')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('email')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('major')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('mata_kuliah')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')

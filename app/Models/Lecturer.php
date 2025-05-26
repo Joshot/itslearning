@@ -12,10 +12,10 @@ class Lecturer extends Authenticatable
     use HasFactory;
 
     protected $fillable = [
-        'name', 'email', 'password',
+        'nidn', 'name', 'email', 'password', 'major', 'mata_kuliah', 'profile_photo'
     ];
 
     protected $hidden = [
-        'password', 'remember_token',
+        'password', 'remember_token'
     ];
 }

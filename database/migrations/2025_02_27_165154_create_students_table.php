@@ -8,12 +8,17 @@ return new class extends Migration {
     public function up() {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
+            $table->string('nim')->unique();
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
+            $table->string('major');
+            $table->year('angkatan');
+            $table->string('profile_photo')->default('/images/profile.jpg');
             $table->timestamps();
         });
     }
+
     public function down() {
         Schema::dropIfExists('students');
     }
