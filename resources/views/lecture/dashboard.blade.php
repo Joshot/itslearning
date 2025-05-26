@@ -15,8 +15,8 @@
         transition: all 0.3s ease;
     }
     .tab-button.active {
-        border-bottom: 2px solid #173967;
-        color: #173967;
+        border-bottom: 2px solid #106587;
+        color: #106587;
     }
 </style>
 

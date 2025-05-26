@@ -12,11 +12,11 @@
         <div>
             <h2 class="font-bold text-lg">Contact</h2>
             <p>Phone:</p>
-            <p>(021) 5422 0808 ext.3518</p>
+            <p>(021) 6712 2832</p>
             <p>Email:</p>
-            <p>elearning@umn.ac.id</p>
-            <p>Whatsapp (Message Only):</p>
-            <p>0822-888-999-21</p>
+            <p>elearningku.edu</p>
+            <p>Whatsapp :</p>
+            <p>081202836128</p>
         </div>
 
         <!-- Quick Links -->
