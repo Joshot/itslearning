@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::create('course_assignments', function (Blueprint $table) {
             $table->id();
             $table->string('course_code');
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('lecturer_id')->nullable()->constrained('lecturers')->onDelete('cascade');
+            $table->foreignId('student_id')->nullable()->constrained('students')->onDelete('cascade');
             $table->timestamps();
 
             $table->foreign('course_code')->references('course_code')->on('courses')->onDelete('cascade');

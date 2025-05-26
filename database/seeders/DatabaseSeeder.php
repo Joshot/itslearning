@@ -19,17 +19,19 @@ class DatabaseSeeder extends Seeder
             'is_admin' => true,
         ]);
 
+
+
         // Sample Student
         Student::factory()->create([
             'name' => 'Joshua Hotama (00000056899)',
-            'email' => 'joshua.hotama@student.umn.ac.id',
+            'email' => 'joshuaho@student.edu',
             'password' => bcrypt('123'),
         ]);
 
         // Sample Lecturer
         Lecturer::factory()->create([
             'name' => 'Hamzah Unto (00000001526)',
-            'email' => 'hamzahunto@lecturer.umn.ac.id',
+            'email' => 'hamzahunto@lecturer.edu',
             'password' => bcrypt('123'),
         ]);
     }

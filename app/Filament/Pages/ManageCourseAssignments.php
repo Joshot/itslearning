@@ -49,38 +49,43 @@ class ManageCourseAssignments extends Page implements HasTable
                     ->label('View Assignments')
                     ->url(fn (Course $record) => route('filament.admin.pages.course-assignments', ['course_code' => $record->course_code])),
                 Action::make('edit')
+                    ->label('Assign Users')
                     ->form([
                         Forms\Components\Select::make('lecturer_ids')
                             ->label('Lecturers')
                             ->options(Lecturer::pluck('name', 'id')->toArray())
                             ->searchable()
-                            ->multiple()
-                            ->required(),
+                            ->multiple(),
                         Forms\Components\Select::make('student_ids')
                             ->label('Students')
                             ->options(Student::pluck('name', 'id')->toArray())
                             ->searchable()
-                            ->multiple()
-                            ->required(),
+                            ->multiple(),
                     ])
                     ->action(function (Course $record, array $data) {
                         // Delete existing assignments for this course
                         CourseAssignment::where('course_code', $record->course_code)->delete();
 
                         // Create new assignments for lecturers
-                        foreach ($data['lecturer_ids'] as $userId) {
-                            CourseAssignment::create([
-                                'course_code' => $record->course_code,
-                                'user_id' => $userId,
-                            ]);
+                        if (!empty($data['lecturer_ids'])) {
+                            foreach ($data['lecturer_ids'] as $lecturerId) {
+                                CourseAssignment::create([
+                                    'course_code' => $record->course_code,
+                                    'lecturer_id' => $lecturerId,
+                                    'student_id' => null,
+                                ]);
+                            }
                         }
 
                         // Create new assignments for students
-                        foreach ($data['student_ids'] as $userId) {
-                            CourseAssignment::create([
-                                'course_code' => $record->course_code,
-                                'user_id' => $userId,
-                            ]);
+                        if (!empty($data['student_ids'])) {
+                            foreach ($data['student_ids'] as $studentId) {
+                                CourseAssignment::create([
+                                    'course_code' => $record->course_code,
+                                    'lecturer_id' => null,
+                                    'student_id' => $studentId,
+                                ]);
+                            }
                         }
                     }),
             ])
@@ -97,30 +102,34 @@ class ManageCourseAssignments extends Page implements HasTable
                             ->label('Lecturers')
                             ->options(Lecturer::pluck('name', 'id')->toArray())
                             ->searchable()
-                            ->multiple()
-                            ->required(),
+                            ->multiple(),
                         Forms\Components\Select::make('student_ids')
                             ->label('Students')
                             ->options(Student::pluck('name', 'id')->toArray())
                             ->searchable()
-                            ->multiple()
-                            ->required(),
+                            ->multiple(),
                     ])
                     ->action(function (array $data) {
                         // Create assignments for lecturers
-                        foreach ($data['lecturer_ids'] as $userId) {
-                            CourseAssignment::create([
-                                'course_code' => $data['course_code'],
-                                'user_id' => $userId,
-                            ]);
+                        if (!empty($data['lecturer_ids'])) {
+                            foreach ($data['lecturer_ids'] as $lecturerId) {
+                                CourseAssignment::create([
+                                    'course_code' => $data['course_code'],
+                                    'lecturer_id' => $lecturerId,
+                                    'student_id' => null,
+                                ]);
+                            }
                         }
 
                         // Create assignments for students
-                        foreach ($data['student_ids'] as $userId) {
-                            CourseAssignment::create([
-                                'course_code' => $data['course_code'],
-                                'user_id' => $userId,
-                            ]);
+                        if (!empty($data['student_ids'])) {
+                            foreach ($data['student_ids'] as $studentId) {
+                                CourseAssignment::create([
+                                    'course_code' => $data['course_code'],
+                                    'lecturer_id' => null,
+                                    'student_id' => $studentId,
+                                ]);
+                            }
                         }
                     }),
             ]);

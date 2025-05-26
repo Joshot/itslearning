@@ -32,10 +32,16 @@ class CourseAssignments extends Page implements HasTable
         return $table
             ->query(CourseAssignment::query()->where('course_code', $this->course_code))
             ->columns([
-                TextColumn::make('user.name')
-                    ->label('Name')
+                TextColumn::make('lecturer.name')
+                    ->label('Lecturer')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->default('-'),
+                TextColumn::make('student.name')
+                    ->label('Student')
+                    ->searchable()
+                    ->sortable()
+                    ->default('-'),
                 TextColumn::make('created_at')
                     ->label('Assigned At')
                     ->dateTime()
