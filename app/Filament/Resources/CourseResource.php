@@ -38,10 +38,19 @@ class CourseResource extends Resource
                                     ->required()
                                     ->minValue(1)
                                     ->maxValue(14),
-                                Forms\Components\FileUpload::make('pdf_path')
-                                    ->label('PDF')
+                                Forms\Components\FileUpload::make('files')
+                                    ->label('Files')
                                     ->directory('materials')
-                                    ->acceptedFileTypes(['application/pdf'])
+                                    ->multiple()
+                                    ->acceptedFileTypes([
+                                        'application/pdf',
+                                        'application/msword',
+                                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                        'application/zip',
+                                        'image/*',
+                                        'audio/*',
+                                        'video/*',
+                                    ])
                                     ->nullable(),
                                 Forms\Components\TextInput::make('video_url')
                                     ->url()

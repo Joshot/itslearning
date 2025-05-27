@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\CourseMaterial;
+use App\Models\CourseAssignment;
 use App\Models\Quiz;
 use App\Models\Question;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class LecturerCourseController extends Controller
 
         if (!$course) {
             Log::error("Course not found for code: {$formattedCourseCode}");
-            return redirect()->route('lecturer.dashboard')->with('error', 'Course not found');
+            return redirect()->route('lecture.dashboard')->with('error', 'Course not found');
         }
 
         // Ambil materi kursus
@@ -35,7 +36,7 @@ class LecturerCourseController extends Controller
         for ($week = 0; $week < 14; $week++) {
             $material = $courseMaterials->firstWhere('week', $week + 1);
             $materials[$week] = [
-                'pdf' => $material && $material->pdf_path ? 'storage/' . $material->pdf_path : null,
+                'files' => $material && $material->files ? array_map(fn($file) => 'storage/' . $file, $material->files) : [],
                 'video_url' => $material ? $material->video_url : null,
                 'optional' => $material ? (bool) $material->is_optional : false,
             ];
@@ -48,7 +49,6 @@ class LecturerCourseController extends Controller
             }])
             ->get()
             ->mapWithKeys(function ($quiz) {
-                // Map minggu berdasarkan title (Tugas 1 -> minggu 4, Tugas 2 -> minggu 7, dst.)
                 $taskNumber = (int) preg_replace('/Tugas (\d+),.*/', '$1', $quiz->title);
                 $week = [1 => 4, 2 => 7, 3 => 10, 4 => 14][$taskNumber] ?? null;
                 if ($week) {
@@ -64,6 +64,14 @@ class LecturerCourseController extends Controller
                 return [];
             });
 
+        // Ambil data course assignments
+        $assignments = CourseAssignment::where('course_code', $formattedCourseCode)
+            ->with(['lecturer', 'student'])
+            ->get();
+        $lecturerCount = $assignments->whereNotNull('lecturer_id')->count();
+        $studentCount = $assignments->whereNotNull('student_id')->count();
+        $totalParticipants = $lecturerCount + $studentCount;
+
         // Hapus tanda "-" untuk Blade
         $courseCodeWithoutDash = str_replace('-', '', $formattedCourseCode);
 
@@ -71,6 +79,7 @@ class LecturerCourseController extends Controller
             'courseName' => $course->course_name,
             'materials' => $materials,
             'quizzes' => $quizzes->toArray(),
+            'totalParticipants' => $totalParticipants,
         ]);
 
         return view('lecture.course', compact(
@@ -78,39 +87,88 @@ class LecturerCourseController extends Controller
             'formattedCourseCode',
             'course',
             'materials',
-            'quizzes'
+            'quizzes',
+            'assignments',
+            'lecturerCount',
+            'studentCount',
+            'totalParticipants'
         ));
     }
 
     public function storeMaterial(Request $request, $courseCode)
     {
         $request->validate([
-            'week' => 'required|integer|between:1,14',
-            'pdf' => 'nullable|file|mimes:pdf|max:10000',
+            'week' => 'required|integer|min:1|max:14',
+            'files.*' => [
+                'nullable',
+                'file',
+                'max:20480', // maksimal 20MB per file
+            ],
             'video_url' => 'nullable|url',
+            'is_optional' => 'nullable|boolean',
         ]);
 
         $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
         $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
         $week = $request->week;
 
-        // Proses upload PDF
-        $pdfPath = null;
-        if ($request->hasFile('pdf')) {
-            $pdfPath = $request->file('pdf')->store('materi', 'public');
-        }
-
-        // Simpan atau perbarui materi
-        CourseMaterial::updateOrCreate(
+        // Ambil material yang sudah ada atau buat baru
+        $material = CourseMaterial::updateOrCreate(
             ['course_id' => $course->id, 'week' => $week],
             [
-                'pdf_path' => $pdfPath ?? CourseMaterial::where('course_id', $course->id)->where('week', $week)->first()->pdf_path ?? null,
                 'video_url' => $request->video_url,
                 'is_optional' => $request->has('is_optional'),
             ]
         );
 
-        return redirect()->back()->with('success', 'Material updated successfully');
+        // Proses upload file
+        if ($request->hasFile('files')) {
+            $files = $material->files ?? [];
+            foreach ($request->file('files') as $file) {
+                $path = $file->store('materials', 'public');
+                $files[] = $path;
+            }
+            $material->files = $files;
+        }
+
+        $material->save();
+
+        $fileTypes = collect($request->file('files') ?? [])->map(function ($file) {
+            return strtoupper(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
+        })->implode(', ');
+
+        $message = "Materi Minggu {$week} berhasil diunggah";
+        if ($fileTypes) {
+            $message .= " (File: {$fileTypes})";
+        }
+        if ($request->video_url) {
+            $message .= " dengan URL video";
+        }
+
+        return redirect()->back()->with('material_uploaded', $message);
+    }
+
+    public function deleteMaterial(Request $request, $courseCode, $week, $index)
+    {
+        $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
+        $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+        $material = CourseMaterial::where('course_id', $course->id)->where('week', $week)->first();
+
+        if (!$material || !isset($material->files[$index])) {
+            return redirect()->back()->with('error', 'File tidak ditemukan.');
+        }
+
+        // Hapus file dari storage
+        Storage::disk('public')->delete($material->files[$index]);
+
+        // Hapus file dari array
+        $files = $material->files;
+        unset($files[$index]);
+        $material->files = array_values($files); // Reindex array
+
+        $material->save();
+
+        return redirect()->back()->with('success', 'File berhasil dihapus.');
     }
 
     public function createQuiz(Request $request, $courseCode)
@@ -140,23 +198,14 @@ class LecturerCourseController extends Controller
         ]);
 
         // Pilih soal acak: 4 easy, 3 medium, 3 hard
-        $easyQuestions = Question::where('difficulty', 'easy')
-            ->inRandomOrder()
-            ->take(4)
-            ->get();
-        $mediumQuestions = Question::where('difficulty', 'medium')
-            ->inRandomOrder()
-            ->take(3)
-            ->get();
-        $hardQuestions = Question::where('difficulty', 'hard')
-            ->inRandomOrder()
-            ->take(3)
-            ->get();
+        $easyQuestions = Question::where('difficulty', 'easy')->inRandomOrder()->take(4)->get();
+        $mediumQuestions = Question::where('difficulty', 'medium')->inRandomOrder()->take(3)->get();
+        $hardQuestions = Question::where('difficulty', 'hard')->inRandomOrder()->take(3)->get();
 
         // Validasi jumlah soal
         if ($easyQuestions->count() < 4 || $mediumQuestions->count() < 3 || $hardQuestions->count() < 3) {
             $quiz->delete();
-            return redirect()->back()->with('error', 'Tidak cukup soal dengan tingkat kesulitan yang diperlukan.');
+            return redirect()->back()->with('error', 'Tidak cukup soal dengan tingkat kesulitan yang dibutuhkan.');
         }
 
         // Perbarui quiz_id untuk soal yang dipilih
@@ -175,5 +224,15 @@ class LecturerCourseController extends Controller
         ]);
 
         return redirect()->back()->with('success', "Tugas berhasil dibuat: {$title} dengan 10 soal (4 easy, 3 medium, 3 hard).");
+    }
+
+    public function showBankSoal($courseCode)
+    {
+        $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
+        $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+        $courseCodeWithoutDash = str_replace('-', '', $formattedCourseCode);
+        $questions = Question::where('course_id', $course->id)->get();
+
+        return view('lecture.banksoal', compact('course', 'questions', 'courseCodeWithoutDash'));
     }
 }

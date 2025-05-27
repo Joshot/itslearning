@@ -9,10 +9,20 @@ class Question extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['question_text', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option', 'quiz_id', 'difficulty'];
+    protected $fillable = [
+        'question_text',
+        'option_a',
+        'option_b',
+        'option_c',
+        'option_d',
+        'correct_option',
+        'task_number',
+        'course_id',
+        'difficulty'
+    ];
 
-    public function quiz()
+    public function course()
     {
-        return $this->belongsTo(Quiz::class, 'quiz_id', 'id');
+        return $this->belongsTo(Course::class);
     }
 }

@@ -11,17 +11,29 @@ class QuestionController extends Controller
     {
         $request->validate([
             'question_text' => 'required|string',
-            'options' => 'required|array|min:2',
-            'correct_answer' => 'required|string|in:' . implode(',', $request->options),
+            'option_a' => 'required|string',
+            'option_b' => 'required|string',
+            'option_c' => 'required|string',
+            'option_d' => 'required|string',
+            'correct_option' => 'required|in:A,B,C,D',
+            'task_number' => 'nullable|in:1,2,3,4',
+            'course_id' => 'required|exists:courses,id',
+            'difficulty' => 'required|in:easy,medium,hard'
         ]);
 
-        Question::create([
-            'question_text' => $request->question_text,
-            'options' => json_encode($request->options),
-            'correct_answer' => $request->correct_answer,
-        ]);
+        Question::create($request->only([
+            'question_text',
+            'option_a',
+            'option_b',
+            'option_c',
+            'option_d',
+            'correct_option',
+            'task_number',
+            'course_id',
+            'difficulty'
+        ]));
 
-        return response()->json(['message' => 'Question added successfully!']);
+        return response()->json(['message' => 'Soal berhasil ditambahkan!']);
     }
 
     public function index()
