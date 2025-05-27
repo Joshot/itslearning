@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('major');
             $table->string('mata_kuliah');
             $table->string('profile_photo')->default('/images/profile.jpg');
+            $table->string('motto')->default('Veni, Vidi, Vici');
             $table->timestamps();
         });
     }

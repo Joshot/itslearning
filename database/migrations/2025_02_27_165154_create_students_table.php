@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->string('major');
             $table->year('angkatan');
             $table->string('profile_photo')->default('/images/profile.jpg');
+            $table->string('motto')->default('Veni, Vidi, Vici');
             $table->timestamps();
         });
     }

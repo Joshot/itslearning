@@ -9,7 +9,9 @@ class Student extends Authenticatable
 {
     use HasFactory;
 
-    protected $fillable = ['nim', 'name', 'email', 'password', 'major', 'angkatan', 'profile_photo'];
+    protected $fillable = [
+        'nim', 'name', 'email', 'password', 'major', 'angkatan', 'profile_photo', 'motto'
+    ];
 
     protected $hidden = ['password'];
 }

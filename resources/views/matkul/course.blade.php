@@ -14,7 +14,7 @@
                 </svg>
             </a>
             <!-- Kode Course -->
-            <div class="px-4 py-2 bg-[#234e7f] text-white rounded-lg text-sm font-semibold">
+            <div class="px-4 py-2 bg-[#106587] text-white rounded-lg text-sm font-semibold">
                 {{ $formattedCourseCode ?? 'Unknown Course' }}
             </div>
         </div>
@@ -108,7 +108,7 @@
                 title: `Kuis ${quizData.quiz_number} Selesai!`,
                 text: `Anda mendapatkan nilai ${quizData.score}`,
                 icon: 'success',
-                confirmButtonColor: '#234e7f',
+                confirmButtonColor: '#106587',
                 confirmButtonText: 'OK'
             });
         }
@@ -123,7 +123,7 @@
             title: 'Oops!',
             text: '{{ session('error') }}',
             icon: 'error',
-            confirmButtonColor: '#234e7f',
+            confirmButtonColor: '#106587',
             confirmButtonText: 'OK'
         });
     });

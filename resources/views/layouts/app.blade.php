@@ -9,12 +9,11 @@
 <body style="background-image: url('/images/background_logo.jpg'); background-size: cover; background-position: center;" class="flex flex-col min-h-screen">
 @include('layouts.navbar')
 
-<main class="flex-grow p-8">
+<main class="flex-grow">
     @yield('content')
     @stack('scripts')
 </main>
 
 @include('layouts.footer')
-
 </body>
 </html>

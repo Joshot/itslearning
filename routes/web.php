@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\LecturerAuthController;
 use App\Http\Controllers\LecturerCourseController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuizController;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,8 @@ Route::middleware(['auth:student'])->group(function () {
     Route::get('/course/{courseCode}', [CourseController::class, 'show'])->name('course.show');
     Route::get('/quiz/{courseCode}/{quizId}', [QuizController::class, 'startQuiz'])->name('kuis.start');
     Route::post('/quiz/{courseCode}/{quizId}', [QuizController::class, 'submitQuiz'])->name('kuis.submit');
+    Route::get('/profile/student', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile/student', [ProfileController::class, 'update'])->name('profile.update');
 });
 
 Route::middleware(['auth:lecturer'])->group(function () {
@@ -37,6 +40,8 @@ Route::middleware(['auth:lecturer'])->group(function () {
     Route::get('/lecturer/course/{courseCode}', [LecturerCourseController::class, 'show'])->name('lecturer.course.show');
     Route::post('/lecturer/course/{courseCode}/material', [LecturerCourseController::class, 'storeMaterial'])->name('lecturer.course.material.store');
     Route::post('/lecturer/course/{courseCode}/quiz', [LecturerCourseController::class, 'createQuiz'])->name('lecturer.course.quiz.create');
+    Route::get('/profile/lecturer', [ProfileController::class, 'edit'])->name('profile.edit.lecturer');
+    Route::patch('/profile/lecturer', [ProfileController::class, 'update'])->name('profile.update.lecturer');
 });
 
 Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');
@@ -45,4 +50,3 @@ Route::get('/questions', [QuestionController::class, 'index'])->name('questions.
 Route::get('/admin/course-assignments/{course_code}', CourseAssignments::class)
     ->name('filament.admin.pages.course-assignments')
     ->middleware(['auth', 'verified']);
-

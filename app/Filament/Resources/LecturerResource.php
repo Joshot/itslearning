@@ -46,6 +46,9 @@ class LecturerResource extends Resource
                     ->image()
                     ->directory('profile-photos')
                     ->default('/images/profile.jpg'),
+                Forms\Components\TextInput::make('motto')
+                    ->maxLength(255)
+                    ->default('Veni, Vidi, Vici'),
             ]);
     }
 

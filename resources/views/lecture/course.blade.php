@@ -14,7 +14,7 @@
                 </svg>
             </a>
             <!-- Kode Course -->
-            <div class="px-4 py-2 bg-[#234e7f] text-white rounded-lg text-sm font-semibold">
+            <div class="px-4 py-2 bg-[#106587] text-white rounded-lg text-sm font-semibold">
                 {{ $formattedCourseCode ?? 'Unknown Course' }}
             </div>
         </div>
@@ -56,7 +56,7 @@
                             <span class="text-gray-700">Optional</span>
                         </label>
                     </div>
-                    <button type="submit" class="px-4 py-2 bg-[#234e7f] text-white rounded-lg hover:bg-blue-700">Save Material</button>
+                    <button type="submit" class="px-4 py-2 bg-[#106587] text-white rounded-lg hover:bg-blue-700">Save Material</button>
                 </form>
 
                 <!-- Tautan PDF -->
@@ -119,7 +119,7 @@
             text: `Apakah yakin ingin membuat Tugas ${taskNumber}?`,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#234e7f',
+            confirmButtonColor: '#106587',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Yakin',
             cancelButtonText: 'Batal'
@@ -133,7 +133,7 @@
                         autocapitalize: 'off'
                     },
                     showCancelButton: true,
-                    confirmButtonColor: '#234e7f',
+                    confirmButtonColor: '#106587',
                     cancelButtonColor: '#d33',
                     confirmButtonText: 'Simpan',
                     cancelButtonText: 'Batal',
@@ -160,7 +160,7 @@
             title: 'Success!',
             text: '{{ session('success') }}',
             icon: 'success',
-            confirmButtonColor: '#234e7f',
+            confirmButtonColor: '#106587',
             confirmButtonText: 'OK'
         });
     });
@@ -173,7 +173,7 @@
             title: 'Oops!',
             text: '{{ session('error') }}',
             icon: 'error',
-            confirmButtonColor: '#234e7f',
+            confirmButtonColor: '#106587',
             confirmButtonText: 'OK'
         });
     });

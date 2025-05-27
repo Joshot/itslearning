@@ -53,7 +53,7 @@
                     @if ($index < count($questions) - 1)
                     <button type="button" class="px-4 py-2 bg-blue-500 text-white rounded-lg ml-auto" onclick="showQuestion({{ $index + 1 }})">Next</button>
                     @else
-                    <button type="button" class="px-4 py-2 bg-[#234e7f] text-white rounded-lg ml-auto" onclick="validateQuiz()">Submit</button>
+                    <button type="button" class="px-4 py-2 bg-[#106587] text-white rounded-lg ml-auto" onclick="validateQuiz()">Submit</button>
                     @endif
                 </div>
             </div>
@@ -80,13 +80,13 @@
         // Hapus highlight dari semua opsi dalam soal ini
         let parentDiv = element.closest('.space-y-2');
         parentDiv.querySelectorAll('.answer-label').forEach(label => {
-            label.classList.remove('bg-[#234e7f]', 'text-white');
+            label.classList.remove('bg-[#106587]', 'text-white');
             label.classList.add('bg-gray-100', 'text-black');
         });
 
         // Tambahkan highlight ke jawaban yang dipilih
         let selectedLabel = element.closest('.answer-label');
-        selectedLabel.classList.add('bg-[#234e7f]', 'text-white');
+        selectedLabel.classList.add('bg-[#106587]', 'text-white');
         selectedLabel.classList.remove('bg-gray-100', 'text-black');
     }
 
@@ -100,7 +100,7 @@
                 text: 'Harap jawab semua pertanyaan sebelum mengirim kuis!',
                 icon: 'warning',
                 confirmButtonText: 'OK',
-                confirmButtonColor: '#234e7f'
+                confirmButtonColor: '#106587'
             });
         } else {
             Swal.fire({
@@ -110,7 +110,7 @@
                 showCancelButton: true,
                 confirmButtonText: 'Ya, Submit',
                 cancelButtonText: 'Batal',
-                confirmButtonColor: '#234e7f'
+                confirmButtonColor: '#106587'
             }).then((result) => {
                 if (result.isConfirmed) {
                     document.getElementById('quizForm').submit();
