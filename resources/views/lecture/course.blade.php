@@ -1,6 +1,9 @@
+<?php
+use Illuminate\Support\Facades\Session;
+?>
 @extends('layouts.app')
 
-@section('title', $course->course_name ?? 'Course Page')
+@section('title', $course->course_name ?: 'Course Page')
 
 @section('content')
 <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -39,6 +42,11 @@
         background: #106587;
         width: 0%;
         transition: width 0.3s ease;
+    }
+    .progress-text {
+        color: #fff;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
     }
     @keyframes spin {
         0% { transform: rotate(0deg); }
@@ -90,15 +98,21 @@
     .action-btn:hover {
         color: #0d4a6b;
     }
-    .delete-btn {
+    .delete-btn, .edit-btn {
         color: #dc2626;
         text-decoration: none;
         font-size: 0.875rem;
         cursor: pointer;
         margin-left: 0.5rem;
     }
+    .edit-btn {
+        color: #3b82f6;
+    }
     .delete-btn:hover {
         color: #b91c1c;
+    }
+    .edit-btn:hover {
+        color: #2563eb;
     }
     .container {
         max-width: 100%;
@@ -109,7 +123,7 @@
     }
     .dashboard-container {
         display: flex;
-        gap: 2rem;
+        gap: 1rem;
         justify-content: center;
         align-items: stretch;
         width: 100%;
@@ -237,14 +251,14 @@
         border: none;
         padding: 0;
     }
-    .participant-card {
+    .participant-card, .quiz-card {
         background: #f9fafb;
         padding: 0.75rem;
         border-radius: 0.5rem;
         margin-bottom: 0.5rem;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
-    .participant-card p {
+    .participant-card p, .quiz-card p {
         margin: 0;
         font-size: 0.875rem;
         color: #374151;
@@ -256,6 +270,18 @@
         overflow-y: auto;
     }
     .participants-section.active {
+        display: block;
+    }
+    .quizzes-section {
+        margin-top: 1rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .quiz-edit-form {
+        display: none;
+        margin-top: 0.5rem;
+    }
+    .quiz-edit-form.active {
         display: block;
     }
     .swal2-popup {
@@ -355,7 +381,6 @@
 
 <div class="container">
     <div class="dashboard-container">
-        <!-- Sidebar -->
         <div class="sidebar">
             <div>
                 <div class="flex justify-between items-center mb-4">
@@ -372,9 +397,45 @@
                     {{ $course->course_name ?? 'Unnamed Course' }}
                 </h2>
                 <a href="{{ route('lecture.banksoal', ['courseCode' => $courseCodeWithoutDash]) }}" class="btn btn-info">Bank Soal</a>
+                <div id="quizzesSection" class="quizzes-section">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-2">Daftar Tugas</h3>
+                    @if ($quizzes->isEmpty())
+                    <p class="text-sm text-gray-600">Belum ada tugas.</p>
+                    @else
+                    @foreach ($quizzes as $week => $quiz)
+                    <div class="quiz-card">
+                        <p><strong>{{ $quiz['title'] }}</strong> (Week {{ $week }})</p>
+                        <p>Task: {{ $quiz['task_number'] }}</p>
+                        <p>Start: {{ \Carbon\Carbon::parse($quiz['start_time'])->format('Y-m-d H:i') }}</p>
+                        <p>End: {{ \Carbon\Carbon::parse($quiz['end_time'])->format('Y-m-d H:i') }}</p>
+                        <p>Total: {{ $quiz['total_questions'] }}</p>
+                        <p>Easy: {{ $quiz['easy_questions'] }}</p>
+                        <p>Medium: {{ $quiz['medium_questions'] }}</p>
+                        <p>Hard: {{ $quiz['hard_questions'] }}</p>
+                        <div class="flex gap-2 mt-2">
+                            <button class="edit-btn" onclick="toggleEditForm({{ $quiz['id'] }})">Edit</button>
+                            <button class="delete-btn" onclick="confirmDeleteQuiz({{ $quiz['id'] }})">Delete</button>
+                        </div>
+                        <form id="edit-quiz-form-{{ $quiz['id'] }}" class="quiz-edit-form" action="{{ route('lecturer.course.quiz.update', ['courseCode' => $courseCodeWithoutDash, 'quiz' => $quiz['id']]) }}" method="POST" onsubmit="updateQuiz(event, {{ $quiz['id'] }})">
+                            @csrf
+                            @method('PATCH')
+                            <div class="mt-2">
+                                <label class="text-gray-700 text-sm">Title</label>
+                                <input type="text" name="title" value="{{ $quiz['title'] }}" class="w-full" required>
+                            </div>
+                            <div class="mt-2">
+                                <label class="text-gray-700 text-sm">End Time</label>
+                                <input type="datetime-local" name="end_time" value="{{ \Carbon\Carbon::parse($quiz['end_time'])->format('Y-m-d\TH:i') }}" class="w-full" required>
+                            </div>
+                            <button type="submit" class="btn btn-success mt-2">Save</button>
+                        </form>
+                    </div>
+                    @endforeach
+                    @endif
+                </div>
             </div>
             <div>
-                <button onclick="toggleParticipants()" class="btn btn-primary">Lihat Peserta</button>
+                <button onclick="toggleParticipants()" class="btn btn-success">Lihat Peserta</button>
                 <div id="participantsSection" class="participants-section">
                     <h3 class="text-sm font-semibold text-gray-700 mb-2">Peserta Mata Kuliah</h3>
                     <p class="text-sm text-gray-600 mb-2">Total: {{ $totalParticipants }} ({{ $lecturerCount }} Dosen, {{ $studentCount }} Mahasiswa)</p>
@@ -396,7 +457,6 @@
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="main-content">
             <h1 class="text-xl font-semibold mb-4 text-gray-800">Materi Kursus</h1>
             <div class="space-y-4">
@@ -409,9 +469,8 @@
 
                 <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 material-card">
                     <h4 class="text-lg font-semibold text-gray-700 mb-2">Week {{ $week + 1 }}</h4>
-                    <p class="text-gray-600 text-sm mb-2">Week {{ $week + 1 }}</p>
+                    <p class="text-gray-600 text-sm">Week {{ $week + 1 }}</p>
 
-                    <!-- Form Upload Materi -->
                     <form action="{{ route('lecturer.course.material.store', ['courseCode' => $courseCodeWithoutDash]) }}" method="POST" enctype="multipart/form-data" class="space-y-3" id="material-form-{{ $week + 1 }}" onsubmit="showLoading(event, this)">
                         @csrf
                         <input type="hidden" name="week" value="{{ $week + 1 }}">
@@ -423,7 +482,7 @@
                                 <span class="text-sm">Choose files to upload</span>
                                 <input id="file-upload-{{ $week + 1 }}" type="file" name="files[]" multiple class="file-upload-input" onchange="previewFiles(event, {{ $week + 1 }})">
                             </label>
-                            <p class="mt-2 text-xs text-gray-600">Any file type allowed</p>
+                            <p class="mt-2 text-xs text-gray-600">Any file type allowed (max 20MB per file)</p>
                             <div class="file-preview" id="file-preview-{{ $week + 1 }}"></div>
                         </div>
                         <div>
@@ -439,7 +498,6 @@
                         <button type="submit" class="btn btn-primary">Save Material</button>
                     </form>
 
-                    <!-- Tautan Files -->
                     @if (!empty($material['files']))
                     @foreach ($material['files'] as $index => $file)
                     <div class="flex items-center">
@@ -457,7 +515,6 @@
                     <p class="text-gray-500 text-sm">No materials available</p>
                     @endif
 
-                    <!-- Video URL -->
                     @if (!empty($material['video_url']))
                     <a href="{{ $material['video_url'] }}" target="_blank" class="action-btn text-sm block">
                         Open Video
@@ -466,27 +523,15 @@
                     <p class="text-gray-500 text-sm">No video available</p>
                     @endif
 
-                    @if (!empty($material['optional']))
+                    @if ($material['optional'])
                     <p class="text-gray-500 text-sm">(Optional)</p>
                     @endif
 
-                    <!-- Bank Soal untuk Tugas -->
-                    @if ($quiz)
-                    <div class="p-3 bg-gray-100 rounded-lg mt-3">
-                        <p class="text-gray-700 font-semibold text-sm">{{ $quiz['title'] }}</p>
-                        <p class="text-gray-600 text-sm">Total Questions: {{ $quiz['total_questions'] }}</p>
-                        <p class="text-gray-600 text-sm">Easy: {{ $quiz['easy_questions'] }}</p>
-                        <p class="text-gray-600 text-sm">Medium: {{ $quiz['medium_questions'] }}</p>
-                        <p class="text-gray-600 text-sm">Hard: {{ $quiz['hard_questions'] }}</p>
-                    </div>
-                    @endif
-
-                    <!-- Form Buat Tugas -->
                     @if ($quizWeek && !$quiz)
                     <form id="create-task-form-{{ $week + 1 }}" action="{{ route('lecturer.course.quiz.create', ['courseCode' => $courseCodeWithoutDash]) }}" method="POST" class="mt-3">
                         @csrf
                         <input type="hidden" name="week" value="{{ $week + 1 }}">
-                        <input type="hidden" name="title" id="task-title-{{ $week + 1 }}">
+                        <input type="text" name="title" id="task-title-{{ $week + 1 }}" placeholder="Enter task title" class="w-full mb-2">
                         <button type="button" onclick="confirmCreateTask({{ $taskNumber }}, {{ $week + 1 }})" class="btn btn-success">
                             Create Task
                         </button>
@@ -496,19 +541,20 @@
                 @endforeach
             </div>
         </div>
-    </div>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
-        <div class="progress-bar-container">
-            <div class="progress-bar" id="progressBar"></div>
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner"></div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="progress-text" id="progressText">Uploading: 0%</div>
         </div>
     </div>
 </div>
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
     let formDirtyStates = {};
     let filePreviews = {};
@@ -516,6 +562,84 @@
     function toggleParticipants() {
         const section = document.getElementById('participantsSection');
         section.classList.toggle('active');
+        Swal.fire({
+            title: 'Informasi',
+            text: section.classList.contains('active') ? 'Daftar peserta ditampilkan.' : 'Daftar peserta disembunyikan.',
+            icon: 'info',
+            confirmButtonColor: '#106587',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }
+
+    function toggleEditForm(quizId) {
+        const form = document.getElementById(`edit-quiz-form-${quizId}`);
+        form.classList.toggle('active');
+    }
+
+    function updateQuiz(event, quizId) {
+        event.preventDefault();
+        const form = document.getElementById(`edit-quiz-form-${quizId}`);
+        const formData = new FormData(form);
+
+        axios.patch(form.action, {
+            title: formData.get('title'),
+            end_time: formData.get('end_time'),
+            _token: document.querySelector('meta[name="csrf-token"]').content
+        }).then(response => {
+            Swal.fire({
+                title: 'Berhasil!',
+                text: response.data.message || 'Tugas diperbarui!',
+                icon: 'success',
+                confirmButtonColor: '#106587'
+            }).then(() => {
+                window.location.reload();
+            });
+        }).catch(error => {
+            Swal.fire({
+                title: 'Error!',
+                text: error.response?.data?.message || 'Gagal memperbarui tugas.',
+                icon: 'error',
+                confirmButtonColor: '#106587'
+            });
+        });
+    }
+
+    function confirmDeleteQuiz(quizId) {
+        Swal.fire({
+            title: 'Konfirmasi',
+            text: 'Apakah Anda yakin ingin menghapus tugas ini?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#106587',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Hapus',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                axios.delete(`/lecturer/course/${{{ json_encode($courseCodeWithoutDash) }}}/quiz/${quizId}`, {
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                }).then(response => {
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: response.data.message || 'Tugas dihapus!',
+                        icon: 'success',
+                        confirmButtonColor: '#106587'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                }).catch(error => {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: error.response?.data?.message || 'Gagal menghapus tugas.',
+                        icon: 'error',
+                        confirmButtonColor: '#106587'
+                    });
+                });
+            }
+        });
     }
 
     function markFormDirty(week) {
@@ -533,6 +657,15 @@
         }
 
         for (let file of files) {
+            if (file.size > 20 * 1024 * 1024) {
+                Swal.fire({
+                    title: 'Peringatan',
+                    text: `File ${file.name} melebihi batas 20MB.`,
+                    icon: 'warning',
+                    confirmButtonColor: '#106587'
+                });
+                continue;
+            }
             filePreviews[week].push(file);
         }
 
@@ -545,6 +678,17 @@
             `;
             previewContainer.appendChild(div);
         });
+
+        if (filePreviews[week].length > 0) {
+            Swal.fire({
+                title: 'Informasi',
+                text: `${filePreviews[week].length} file dipilih untuk diunggah.`,
+                icon: 'info',
+                confirmButtonColor: '#106587',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
     }
 
     function removeFile(week, index) {
@@ -566,6 +710,15 @@
         const dataTransfer = new DataTransfer();
         filePreviews[week].forEach(file => dataTransfer.items.add(file));
         input.files = dataTransfer.files;
+
+        Swal.fire({
+            title: 'Informasi',
+            text: 'File dihapus dari daftar unggahan.',
+            icon: 'info',
+            confirmButtonColor: '#106587',
+            timer: 1500,
+            showConfirmButton: false
+        });
     }
 
     function showLoading(event, form) {
@@ -576,59 +729,92 @@
         const videoUrlInput = form.querySelector('input[name="video_url"]');
         const isOptionalInput = form.querySelector('input[name="is_optional"]');
 
-        // Validate input
         if (!filesInput.files.length && !videoUrlInput.value && !isOptionalInput.checked && !formDirtyStates[week]) {
             Swal.fire({
                 title: 'Informasi',
                 text: 'Silakan pilih file, masukkan URL video, atau ubah status opsional.',
                 icon: 'info',
-                confirmButtonColor: '#106587',
-                confirmButtonText: 'OK'
+                confirmButtonColor: '#106587'
             });
             return;
         }
 
         const overlay = document.getElementById('loadingOverlay');
         const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
         overlay.style.display = 'flex';
         progressBar.style.width = '0%';
+        progressText.textContent = 'Uploading: 0%';
 
-        // Use Fetch API instead of XMLHttpRequest for better error handling
         const formData = new FormData(form);
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.onprogress = function(event) {
+            if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                progressBar.style.width = `${percent}%`;
+                progressText.textContent = `Uploading: ${percent}%`;
             }
-        })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw err; });
+        };
+
+        xhr.open('POST', form.action, true);
+        xhr.setRequestHeader('X-CSRF-TOKEN', document.querySelector('meta[name="csrf-token"]').content);
+        xhr.setRequestHeader('Accept', 'application/json');
+
+        xhr.onload = function() {
+            overlay.style.display = 'none';
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: data.message || 'Materi berhasil diunggah!',
+                        icon: 'success',
+                        confirmButtonColor: '#106587'
+                    }).then(() => {
+                        formDirtyStates[week] = false;
+                        window.location.reload();
+                    });
+                } catch (e) {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Respon server tidak valid.',
+                        icon: 'error',
+                        confirmButtonColor: '#106587'
+                    });
                 }
-                return response.json();
-            })
-            .then(data => {
-                overlay.style.display = 'none';
-                Swal.fire({
-                    title: 'Berhasil!',
-                    text: data.message || 'Materi berhasil diunggah!',
-                    icon: 'success',
-                    confirmButtonColor: '#106587'
-                }).then(() => {
-                    window.location.reload();
-                });
-            })
-            .catch(error => {
-                overlay.style.display = 'none';
+            } else {
+                let errorMessage = 'Gagal mengunggah materi.';
+                try {
+                    const error = JSON.parse(xhr.responseText);
+                    if (error.messages) {
+                        errorMessage = Object.values(error.messages).flat().join(' ');
+                    } else if (error.message) {
+                        errorMessage = error.message;
+                    }
+                } catch (e) {
+                    errorMessage = 'Terjadi kesalahan pada server.';
+                }
                 Swal.fire({
                     title: 'Error!',
-                    text: error.message || 'Gagal mengunggah materi.',
+                    text: errorMessage,
                     icon: 'error',
                     confirmButtonColor: '#106587'
                 });
+            }
+        };
+
+        xhr.onerror = function() {
+            overlay.style.display = 'none';
+            Swal.fire({
+                title: 'Error!',
+                text: 'Koneksi gagal. Periksa jaringan Anda.',
+                icon: 'error',
+                confirmButtonColor: '#106587'
             });
+        };
+
+        xhr.send(formData);
     }
 
     function confirmBack(event) {
@@ -646,7 +832,7 @@
                 cancelButtonText: 'Simpan'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = "{{ url('/lecturer/dashboard') }}";
+                    window.location.href = "{{ route('lecturer.dashboard') }}";
                 } else if (result.dismiss === Swal.DismissReason.cancel) {
                     Swal.fire({
                         title: 'Simpan Perubahan',
@@ -669,15 +855,22 @@
                                     submitted++;
                                 }
                             });
-                            if (submitted === 0) {
-                                window.location.href = "{{ url('/lecturer/dashboard') }}";
+                            if (!submitted) {
+                                Swal.fire({
+                                    title: 'Informasi',
+                                    text: 'Tidak ada perubahan untuk disimpan.',
+                                    icon: 'info',
+                                    confirmButtonColor: '#106587'
+                                }).then(() => {
+                                    window.location.href = "{{ route('lecturer.dashboard') }}";
+                                });
                             }
                         }
                     });
                 }
             });
         } else {
-            window.location.href = "{{ url('/lecturer/dashboard') }}";
+            window.location.href = "{{ route('lecturer.dashboard') }}";
         }
     }
 
@@ -693,24 +886,24 @@
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
+                const titleInput = document.getElementById(`task-title-${week}`);
+                if (!titleInput.value.trim()) {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Judul tugas tidak boleh kosong!',
+                        icon: 'error',
+                        confirmButtonColor: '#106587'
+                    });
+                    return;
+                }
+                document.getElementById(`create-task-form-${week}`).submit();
                 Swal.fire({
-                    text: 'Masukkan nama judul materi.',
-                    input: 'text',
-                    inputPlaceholder: 'Contoh: Dasar HTML',
-                    inputAttributes: { autocapitalize: 'off' },
-                    showCancelButton: true,
+                    title: 'Informasi',
+                    text: 'Membuat tugas...',
+                    icon: 'info',
                     confirmButtonColor: '#106587',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Simpan',
-                    cancelButtonText: 'Cancel',
-                    inputValidator: (value) => {
-                        if (!value) return 'Judul tugas tidak boleh kosong!';
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        document.getElementById(`task-title-${week}`).value = `Tugas ${taskNumber}, ${result.value}`;
-                        document.getElementById(`create-task-form-${week}`).submit();
-                    }
+                    timer: 1500,
+                    showConfirmButton: false
                 });
             }
         });
@@ -729,44 +922,97 @@
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
-                event.target.closest('form').submit();
+                const form = event.target.closest('form');
+                const formData = new FormData(form);
+                formData.append('_method', 'DELETE');
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', form.action, true);
+                xhr.setRequestHeader('X-CSRF-TOKEN', document.querySelector('meta[name="csrf-token"]').content);
+                xhr.setRequestHeader('Accept', 'application/json');
+
+                xhr.onload = function() {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            Swal.fire({
+                                title: 'Berhasil!',
+                                text: data.message || 'File berhasil dihapus!',
+                                icon: 'success',
+                                confirmButtonColor: '#106587'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } catch (e) {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Respon server tidak valid.',
+                                icon: 'error',
+                                confirmButtonColor: '#106587'
+                            });
+                        }
+                    } else {
+                        let errorMessage = 'Gagal menghapus file.';
+                        try {
+                            const error = JSON.parse(xhr.responseText);
+                            if (error.message) {
+                                errorMessage = error.message;
+                            }
+                        } catch (e) {
+                            errorMessage = 'Terjadi kesalahan pada server.';
+                        }
+                        Swal.fire({
+                            title: 'Error!',
+                            text: errorMessage,
+                            icon: 'error',
+                            confirmButtonColor: '#106587'
+                        });
+                    }
+                };
+
+                xhr.onerror = function() {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Koneksi gagal. Periksa jaringan Anda.',
+                        icon: 'error',
+                        confirmButtonColor: '#106587'
+                    });
+                };
+
+                xhr.send(formData);
             }
         });
-        return false;
     }
 
-    @if(session('success'))
-        document.addEventListener("DOMContentLoaded", function() {
+    @if (Session::has('success'))
+        document.addEventListener('DOMContentLoaded', function() {
             Swal.fire({
                 title: 'Berhasil!',
-                text: '{{ session('success') }}',
+                text: '{{ Session::get('success') }}',
                 icon: 'success',
-                confirmButtonColor: '#106587',
-                confirmButtonText: 'OK'
+                confirmButtonColor: '#106587'
             });
         });
     @endif
 
-    @if(session('error'))
-        document.addEventListener("DOMContentLoaded", function() {
+    @if ($errors->any() || Session::has('error'))
+        document.addEventListener('DOMContentLoaded', function() {
             Swal.fire({
                 title: 'Error!',
-                text: '{{ session('error') }}',
+                text: '{{ Session::get('error') ?? $errors->first() }}',
                 icon: 'error',
-                confirmButtonColor: '#106587',
-                confirmButtonText: 'OK'
+                confirmButtonColor: '#106587'
             });
         });
     @endif
 
-    @if(session('material_uploaded'))
-        document.addEventListener("DOMContentLoaded", function() {
+    @if (Session::has('material_uploaded'))
+        document.addEventListener('DOMContentLoaded', function() {
             Swal.fire({
                 title: 'Berhasil!',
-                text: '{{ session('material_uploaded') }}',
+                text: '{{ Session::get('material_uploaded') }}',
                 icon: 'success',
-                confirmButtonColor: '#106587',
-                confirmButtonText: 'OK'
+                confirmButtonColor: '#106587'
             });
         });
     @endif

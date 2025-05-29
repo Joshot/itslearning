@@ -41,6 +41,8 @@ Route::middleware(['auth:lecturer'])->group(function () {
     Route::post('/lecturer/course/{courseCode}/material', [LecturerCourseController::class, 'storeMaterial'])->name('lecturer.course.material.store');
     Route::delete('/lecturer/course/{courseCode}/material/{week}/{index}', [LecturerCourseController::class, 'deleteMaterial'])->name('lecturer.course.material.delete');
     Route::post('/lecturer/course/{courseCode}/quiz', [LecturerCourseController::class, 'createQuiz'])->name('lecturer.course.quiz.create');
+    Route::patch('/lecturer/course/{courseCode}/quiz/{quiz}', [LecturerCourseController::class, 'updateQuiz'])->name('lecturer.course.quiz.update');
+    Route::delete('/lecturer/course/{courseCode}/quiz/{quiz}', [LecturerCourseController::class, 'deleteQuiz'])->name('lecturer.course.quiz.delete');
     Route::get('/lecturer/course/{courseCode}/bank-soal', [LecturerCourseController::class, 'showBankSoal'])->name('lecture.banksoal');
     Route::get('/profile/lecturer', [ProfileController::class, 'edit'])->name('profile.edit.lecturer');
     Route::patch('/profile/lecturer', [ProfileController::class, 'update'])->name('profile.update.lecturer');

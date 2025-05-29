@@ -23,15 +23,25 @@ class QuizResource extends Resource
                 Forms\Components\Select::make('course_code')
                     ->relationship('course', 'course_name')
                     ->searchable()
-                    ->required(),
+                    ->required()
+                    ->label('Course'),
+                Forms\Components\TextInput::make('task_number')
+                    ->numeric()
+                    ->required()
+                    ->minValue(1)
+                    ->maxValue(4)
+                    ->label('Task Number'),
                 Forms\Components\TextInput::make('title')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->label('Title'),
                 Forms\Components\DateTimePicker::make('start_time')
-                    ->required(),
+                    ->required()
+                    ->label('Start Time'),
                 Forms\Components\DateTimePicker::make('end_time')
                     ->required()
-                    ->after('start_time'),
+                    ->after('start_time')
+                    ->label('End Time'),
                 Forms\Components\Section::make('Questions')
                     ->schema([
                         Forms\Components\Repeater::make('questions')
@@ -39,19 +49,24 @@ class QuizResource extends Resource
                             ->schema([
                                 Forms\Components\Textarea::make('question_text')
                                     ->required()
-                                    ->maxLength(65535),
+                                    ->maxLength(65535)
+                                    ->label('Question Text'),
                                 Forms\Components\TextInput::make('option_a')
                                     ->required()
-                                    ->maxLength(255),
+                                    ->maxLength(255)
+                                    ->label('Option A'),
                                 Forms\Components\TextInput::make('option_b')
                                     ->required()
-                                    ->maxLength(255),
+                                    ->maxLength(255)
+                                    ->label('Option B'),
                                 Forms\Components\TextInput::make('option_c')
                                     ->required()
-                                    ->maxLength(255),
+                                    ->maxLength(255)
+                                    ->label('Option C'),
                                 Forms\Components\TextInput::make('option_d')
                                     ->required()
-                                    ->maxLength(255),
+                                    ->maxLength(255)
+                                    ->label('Option D'),
                                 Forms\Components\Select::make('correct_option')
                                     ->options([
                                         'A' => 'A',
@@ -59,14 +74,16 @@ class QuizResource extends Resource
                                         'C' => 'C',
                                         'D' => 'D',
                                     ])
-                                    ->required(),
+                                    ->required()
+                                    ->label('Correct Option'),
                                 Forms\Components\Select::make('difficulty')
                                     ->options([
                                         'easy' => 'Easy',
                                         'medium' => 'Medium',
                                         'hard' => 'Hard',
                                     ])
-                                    ->required(),
+                                    ->required()
+                                    ->label('Difficulty'),
                             ])
                             ->columns(2),
                     ]),
@@ -81,7 +98,12 @@ class QuizResource extends Resource
                     ->label('Course')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('task_number')
+                    ->label('Task Number')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('title')
+                    ->label('Title')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('questions_count')
@@ -90,9 +112,11 @@ class QuizResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('start_time')
                     ->dateTime()
+                    ->label('Start Time')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('end_time')
                     ->dateTime()
+                    ->label('End Time')
                     ->sortable(),
             ])
             ->filters([

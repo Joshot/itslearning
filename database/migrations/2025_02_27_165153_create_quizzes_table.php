@@ -10,11 +10,15 @@ return new class extends Migration
     {
         Schema::create('quizzes', function (Blueprint $table) {
             $table->id();
-            $table->string('course_code'); // Tambahkan kolom course_code
-            $table->string('title'); // Nama kuis
-            $table->dateTime('start_time')->nullable(); // Waktu mulai kuis
-            $table->dateTime('end_time')->nullable(); // Waktu berakhir kuis
+            $table->string('course_code');
+            $table->unsignedInteger('task_number'); // Add task_number column
+            $table->string('title');
+            $table->dateTime('start_time')->nullable();
+            $table->dateTime('end_time')->nullable();
             $table->timestamps();
+
+            // Foreign key to courses
+            $table->foreign('course_code')->references('course_code')->on('courses')->onDelete('cascade');
         });
     }
 
