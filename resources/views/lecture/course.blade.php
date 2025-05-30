@@ -462,9 +462,10 @@ use Illuminate\Support\Facades\Session;
             <div class="space-y-4">
                 @foreach ($materials as $week => $material)
                 @php
-                $quizWeek = in_array($week + 1, [4, 7, 10, 14]) ? ($week + 1) : null;
+                $quizWeeks = [4, 7, 10, 14]; // Daftar minggu kuis
+                $quizWeek = in_array($week + 1, $quizWeeks) ? ($week + 1) : null;
                 $quiz = $quizWeek ? ($quizzes[$quizWeek] ?? null) : null;
-                $taskNumber = $quizWeek ? (int)($quizWeek / 3.5) : null;
+                $taskNumber = $quizWeek ? array_search($week + 1, $quizWeeks) + 1 : null;
                 @endphp
 
                 <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 material-card">

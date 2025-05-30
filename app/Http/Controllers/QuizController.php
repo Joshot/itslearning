@@ -2,126 +2,108 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Course;
 use App\Models\Question;
-use App\Models\StudentAttempt;
-use App\Models\StudentAnswer;
 use App\Models\Quiz;
+use App\Models\StudentAnswer;
+use App\Models\StudentAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Log;
 
 class QuizController extends Controller
 {
-    /**
-     * Menampilkan halaman kuis dan mengambil soal dari database berdasarkan algoritma CAT.
-     */
-    public function show($courseCode)
-    {
-        // Load course data
-        $course = Course::where('course_code', $courseCode)->firstOrFail();
-        $courseName = $course->name;
-        $formattedCourseCode = $course->course_code;
-
-        // Load materials (adjust based on your actual logic)
-        $materials = //* Logic to get course materials */;
-
-        // Load available quizzes (adjust based on your logic)
-        $availableQuizzes = //* Logic to get available quizzes */;
-
-        // Get quiz scores for the authenticated student
-        $studentId = Auth::guard('student')->id();
-        $quizScores = StudentAttempt::where('student_id', $studentId)
-            ->whereIn('quiz_id', [1, 2, 3, 4]) // Assuming quiz IDs are 1, 2, 3, 4
-            ->pluck('score', 'quiz_id')
-            ->toArray();
-
-        return view('course', [
-            'courseName' => $courseName,
-            'formattedCourseCode' => $formattedCourseCode,
-            'courseCodeWithoutDash' => str_replace('-', '', $courseCode),
-            'materials' => $materials,
-            'availableQuizzes' => $availableQuizzes,
-            'quizScores' => $quizScores,
-        ]);
-    }
-
     public function startQuiz($courseCode, $quizId)
     {
-        $studentId = auth()->id();
-
-        // Format kode kursus agar sesuai dengan konfigurasi
+        $studentId = Auth::guard('student')->id();
         $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
 
-        // Ambil daftar kursus dari konfigurasi
-        $courses = config('courses');
-
-        // Cari kursus berdasarkan kode yang diformat
-        $course = collect($courses)->firstWhere('code', $formattedCourseCode);
-
-        if (!$course) {
-            return redirect()->route('dashboard')->with('error', 'Course not found');
-        }
-
-        // Ambil nama kursus
-        $courseName = $course['name'];
-
-        // Ambil kuis berdasarkan `course_code` dan `quizId`
-        $quiz = Quiz::where('course_code', $formattedCourseCode)
-            ->where('id', $quizId) // Perbaikan: pastikan kuis sesuai dengan quizId
-            ->first();
+        $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+        $quiz = Quiz::where('id', $quizId)->where('course_code', $formattedCourseCode)->first();
 
         if (!$quiz) {
-            return redirect()->route('dashboard')->with('error', 'Quiz tidak ditemukan.');
+            Log::error("Quiz not found", ['quizId' => $quizId, 'courseCode' => $formattedCourseCode]);
+            return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
+                ->with('error', 'Quiz tidak ditemukan.');
         }
-
-        // Ambil soal kuis sesuai aturan CAT
-        $questions = $this->getQuestionsForQuiz($quizId);
-
-        return view('matkul.kuis', compact('questions', 'courseCode', 'quizId', 'courseName'));
-    }
-
-
-
-
-
-    /**
-     * Menyimpan hasil kuis dan jawaban mahasiswa ke database.
-     */
-    public function submitQuiz(Request $request, $courseCode, $quizId)
-    {
-        $studentId = Auth::guard('student')->id();
-
-        if (!$studentId) {
-            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
-        }
-
-        $answers = $request->input('answers');
 
         $existingAttempt = StudentAttempt::where('student_id', $studentId)
             ->where('quiz_id', $quizId)
+            ->where('course_id', $course->id)
+            ->where('task_number', $quiz->task_number)
             ->first();
 
         if ($existingAttempt) {
+            Log::warning("Quiz already attempted", ['studentId' => $studentId, 'quizId' => $quizId]);
             return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
                 ->with('error', 'Anda sudah mengerjakan kuis ini.');
         }
 
-        $attempt = new StudentAttempt();
-        $attempt->student_id = $studentId;
-        $attempt->quiz_id = $quizId;
-        $attempt->score = 0;
-        $attempt->save();
+        $questions = $this->getQuestionsForQuiz($quizId, $course->id, $quiz->task_number);
+        if ($questions->count() < 10) {
+            Log::error("Insufficient questions", ['quizId' => $quizId, 'questionCount' => $questions->count()]);
+            return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
+                ->with('error', 'Tidak cukup soal untuk kuis ini.');
+        }
+
+        return view('matkul.kuis', compact('questions', 'courseCode', 'quizId', 'course', 'quiz'));
+    }
+
+    public function submitQuiz(Request $request, $courseCode, $quizId)
+    {
+        $studentId = Auth::guard('student')->id();
+        $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
+
+        $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+        $quiz = Quiz::where('id', $quizId)->where('course_code', $formattedCourseCode)->firstOrFail();
+
+        $existingAttempt = StudentAttempt::where('student_id', $studentId)
+            ->where('quiz_id', $quizId)
+            ->where('course_id', $course->id)
+            ->where('task_number', $quiz->task_number)
+            ->first();
+
+        if ($existingAttempt) {
+            Log::warning("Quiz already attempted on submit", ['studentId' => $studentId, 'quizId' => $quizId]);
+            return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
+                ->with('error', 'Anda sudah mengerjakan kuis ini.');
+        }
+
+        $answers = $request->input('answers', []);
+        $questions = $this->getQuestionsForQuiz($quizId, $course->id, $quiz->task_number);
+
+        if (count($answers) < $questions->count()) {
+            Log::warning("Incomplete answers", ['answered' => count($answers), 'required' => $questions->count()]);
+            return redirect()->back()->with('error', 'Harap jawab semua soal sebelum mengirimkan kuis.');
+        }
+
+        $attempt = StudentAttempt::create([
+            'student_id' => $studentId,
+            'quiz_id' => $quizId,
+            'course_id' => $course->id,
+            'task_number' => $quiz->task_number,
+            'score' => 0,
+        ]);
 
         $score = 0;
-        $totalQuestions = count($answers);
+        $hardCorrectCount = 0;
 
         foreach ($answers as $questionId => $selectedOption) {
             $question = Question::find($questionId);
-            if (!$question) continue;
+            if (!$question) {
+                Log::warning("Question not found", ['questionId' => $questionId]);
+                continue;
+            }
 
             $isCorrect = $question->correct_option == $selectedOption;
             if ($isCorrect) {
-                $score++;
+                if ($question->difficulty == 'easy') {
+                    $score += 5;
+                } elseif ($question->difficulty == 'medium') {
+                    $score += 10;
+                } elseif ($question->difficulty == 'hard') {
+                    $hardCorrectCount++;
+                }
             }
 
             StudentAnswer::create([
@@ -132,89 +114,63 @@ class QuizController extends Controller
             ]);
         }
 
-        $finalScore = ($score / $totalQuestions) * 100;
-        $attempt->score = $finalScore;
+        // Hard scoring: 20 for first, 15 for each additional
+        if ($hardCorrectCount >= 1) {
+            $score += 20; // First hard correct
+        }
+        if ($hardCorrectCount >= 2) {
+            $score += 15; // Second hard correct
+        }
+        if ($hardCorrectCount == 3) {
+            $score += 15; // Third hard correct
+        }
+
+        $attempt->score = $score;
         $attempt->save();
 
-        return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
-            ->with('quiz_completed', [
-                'quiz_number' => $quizId,
-                'score' => round($finalScore, 2),
-            ]);
+        Log::info("Quiz submitted", [
+            'studentId' => $studentId,
+            'quizId' => $quizId,
+            'score' => $score,
+            'hardCorrect' => $hardCorrectCount,
+        ]);
+
+        $studentAnswers = StudentAnswer::where('attempt_id', $attempt->id)->get()->keyBy('question_id');
+        return view('matkul.kuis', [
+            'questions' => $questions,
+            'courseCode' => $courseCode,
+            'quizId' => $quizId,
+            'course' => $course,
+            'quiz' => $quiz,
+            'attempt' => $attempt,
+            'studentAnswers' => $studentAnswers,
+            'score' => $score,
+        ]);
     }
 
-
-    /**
-     * Mengambil soal berdasarkan aturan CAT (default pertama kali).
-     */
-    private function getQuestionsForQuiz($quizId)
+    private function getQuestionsForQuiz($quizId, $courseId, $taskNumber)
     {
-        return collect([
-            'easy' => Question::where('difficulty', 'easy')->where('quiz_id', $quizId)->inRandomOrder()->limit(4)->get(),
-            'medium' => Question::where('difficulty', 'medium')->where('quiz_id', $quizId)->inRandomOrder()->limit(3)->get(),
-            'hard' => Question::where('difficulty', 'hard')->where('quiz_id', $quizId)->inRandomOrder()->limit(3)->get(),
-        ])->flatten();
-    }
+        $easy = Question::where('difficulty', 'easy')
+            ->where('course_id', $courseId)
+            ->where('task_number', $taskNumber)
+            ->inRandomOrder()
+            ->take(4)
+            ->get();
 
-    /**
-     * Mengecek apakah semua kuis sudah selesai untuk mengaktifkan ITS.
-     */
-    private function checkITS($studentId)
-    {
-        $totalQuizzes = Quiz::count();
-        $attemptedQuizzes = StudentAttempt::where('student_id', $studentId)->count();
+        $medium = Question::where('difficulty', 'medium')
+            ->where('course_id', $courseId)
+            ->where('task_number', $taskNumber)
+            ->inRandomOrder()
+            ->take(3)
+            ->get();
 
-        if ($attemptedQuizzes >= $totalQuizzes) {
-            // Panggil fungsi analisis ITS
-            $this->analyzeITS($studentId);
-        }
-    }
+        $hard = Question::where('difficulty', 'hard')
+            ->where('course_id', $courseId)
+            ->where('task_number', $taskNumber)
+            ->inRandomOrder()
+            ->take(3)
+            ->get();
 
-    /**
-     * Menganalisis hasil kuis mahasiswa berdasarkan ITS.
-     */
-    private function analyzeITS($studentId)
-    {
-        $attempts = StudentAttempt::where('student_id', $studentId)->get();
-        $totalScore = 0;
-        $errorCount = ['easy' => 0, 'medium' => 0, 'hard' => 0];
-
-        foreach ($attempts as $attempt) {
-            $totalScore += $attempt->score;
-
-            $answers = StudentAnswer::where('attempt_id', $attempt->id)->get();
-            foreach ($answers as $answer) {
-                if (!$answer->is_correct) {
-                    $question = Question::find($answer->question_id);
-                    $errorCount[$question->difficulty]++;
-                }
-            }
-        }
-
-        $averageScore = $totalScore / count($attempts);
-        $feedback = $this->getFeedback($averageScore);
-
-        // Simpan hasil ITS
-        return [
-            'average_score' => $averageScore,
-            'feedback' => $feedback,
-            'errors' => $errorCount,
-        ];
-    }
-
-    /**
-     * Memberikan feedback berdasarkan skor rata-rata.
-     */
-    private function getFeedback($score)
-    {
-        if ($score >= 85) return 'A';
-        if ($score >= 80) return 'A-';
-        if ($score >= 75) return 'B+';
-        if ($score >= 70) return 'B';
-        if ($score >= 65) return 'B-';
-        if ($score >= 60) return 'C+';
-        if ($score >= 55) return 'C';
-        if ($score >= 45) return 'D';
-        return 'E';
+        return $easy->merge($medium)->merge($hard);
     }
 }

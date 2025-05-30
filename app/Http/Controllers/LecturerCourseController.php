@@ -13,6 +13,18 @@ use Illuminate\Support\Facades\Storage;
 
 class LecturerCourseController extends Controller
 {
+    // Helper method to map week to task number
+    private function getTaskNumberFromWeek($week)
+    {
+        $quizWeeks = [
+            4 => 1,
+            7 => 2,
+            10 => 3,
+            14 => 4
+        ];
+        return $quizWeeks[$week] ?? null;
+    }
+
     public function show($courseCode)
     {
         $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
@@ -34,27 +46,58 @@ class LecturerCourseController extends Controller
             ];
         }
 
-        $quizzes = Quiz::where('course_code', $formattedCourseCode)->get()->mapWithKeys(function ($quiz) use ($course) {
+        // Define task number to week mapping
+        $taskToWeek = [
+            1 => 4,
+            2 => 7,
+            3 => 10,
+            4 => 14
+        ];
+
+        $quizzes = Quiz::where('course_code', $formattedCourseCode)->get()->mapWithKeys(function ($quiz) use ($course, $taskToWeek) {
             $taskNumber = $quiz->task_number;
-            $week = [1 => 4, 2 => 7, 3 => 10, 4 => 14][$taskNumber] ?? null;
-            if ($week) {
-                $questions = Question::where('course_id', $course->id)
-                    ->where('task_number', $taskNumber)
-                    ->get(['id', 'task_number', 'course_id', 'difficulty']);
-                return [$week => [
-                    'id' => $quiz->id,
-                    'title' => $quiz->title,
-                    'task_number' => $taskNumber,
-                    'start_time' => $quiz->start_time,
-                    'end_time' => $quiz->end_time,
-                    'total_questions' => $questions->count(),
-                    'easy_questions' => $questions->where('difficulty', 'easy')->count(),
-                    'medium_questions' => $questions->where('difficulty', 'medium')->count(),
-                    'hard_questions' => $questions->where('difficulty', 'hard')->count(),
-                ]];
+
+            // Check if task number is valid
+            if (!isset($taskToWeek[$taskNumber])) {
+                return [];
             }
-            return [];
-        });
+
+            $week = $taskToWeek[$taskNumber];
+
+            // Fetch 10 questions: 4 easy, 3 medium, 3 hard
+            $easyQuestions = Question::where('course_id', $course->id)
+                ->where('task_number', $taskNumber)
+                ->where('difficulty', 'easy')
+                ->inRandomOrder()
+                ->take(4)
+                ->get();
+            $mediumQuestions = Question::where('course_id', $course->id)
+                ->where('task_number', $taskNumber)
+                ->where('difficulty', 'medium')
+                ->inRandomOrder()
+                ->take(3)
+                ->get();
+            $hardQuestions = Question::where('course_id', $course->id)
+                ->where('task_number', $taskNumber)
+                ->where('difficulty', 'hard')
+                ->inRandomOrder()
+                ->take(3)
+                ->get();
+
+            $questions = $easyQuestions->merge($mediumQuestions)->merge($hardQuestions);
+
+            return [$week => [
+                'id' => $quiz->id,
+                'title' => $quiz->title,
+                'task_number' => $taskNumber,
+                'start_time' => $quiz->start_time,
+                'end_time' => $quiz->end_time,
+                'total_questions' => $questions->count(),
+                'easy_questions' => $easyQuestions->count(),
+                'medium_questions' => $mediumQuestions->count(),
+                'hard_questions' => $hardQuestions->count(),
+            ]];
+        })->filter(); // Remove empty entries
 
         $assignments = CourseAssignment::where('course_code', $formattedCourseCode)
             ->with(['lecturer', 'student'])
@@ -123,14 +166,23 @@ class LecturerCourseController extends Controller
                 $message .= " dengan URL video";
             }
 
-            Log::info("Material uploaded successfully", ['log' => $formattedCourseCode, 'week' => $week]);
+            Log::info("Material uploaded successfully", [
+                'course_code' => $formattedCourseCode,
+                'week' => $week
+            ]);
 
             return response()->json(['message' => $message], 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::warning("Validation failed for material upload", ['errors' => $e->errors(), 'material' => $courseCode]);
+            Log::warning("Validation failed for material upload", [
+                'errors' => $e->errors(),
+                'course_code' => $courseCode
+            ]);
             return response()->json(['error' => 'Validation failed', 'messages' => $e->errors()], 422);
         } catch (\Exception $e) {
-            Log::error("Error uploading material: {$e->getMessage()}", ['material' => $courseCode, 'week' => $request->week]);
+            Log::error("Error uploading material: {$e->getMessage()}", [
+                'course_code' => $courseCode,
+                'week' => $request->week
+            ]);
             return response()->json(['error' => 'Failed to upload material', 'message' => $e->getMessage()], 500);
         }
     }
@@ -143,7 +195,11 @@ class LecturerCourseController extends Controller
             $material = CourseMaterial::where('course_id', $course->id)->where('week', $week)->first();
 
             if (!$material || !isset($material->files[$index])) {
-                Log::warning("Material or file not found", ['course_id' => $course->id, 'week' => $week, 'index' => $index]);
+                Log::warning("Material or file not found", [
+                    'course_id' => $course->id,
+                    'week' => $week,
+                    'index' => $index
+                ]);
                 return response()->json(['error' => 'File tidak tersedia'], 404);
             }
 
@@ -153,11 +209,19 @@ class LecturerCourseController extends Controller
             $material->files = array_values($files);
             $material->save();
 
-            Log::info("File deleted successfully", ['courseCode' => $formattedCourseCode, 'week' => $week, 'index' => $index]);
+            Log::info("File deleted successfully", [
+                'course_code' => $formattedCourseCode,
+                'week' => $week,
+                'index' => $index
+            ]);
 
             return response()->json(['message' => 'File successfully deleted.'], 200);
         } catch (\Exception $e) {
-            Log::error("Error deleting material: {$e->getMessage()}", ['courseCode' => $courseCode, 'week' => $week, 'index' => $index]);
+            Log::error("Error deleting material: {$e->getMessage()}", [
+                'course_code' => $courseCode,
+                'week' => $week,
+                'index' => $index
+            ]);
             return response()->json(['error' => 'Failed to delete file', 'message' => $e->getMessage()], 500);
         }
     }
@@ -175,7 +239,11 @@ class LecturerCourseController extends Controller
             $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
             $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
 
-            $taskNumber = (int) ($week / 3.5);
+            $taskNumber = $this->getTaskNumberFromWeek($week);
+            if ($taskNumber === null) {
+                return response()->json(['message' => 'Minggu tidak valid untuk tugas'], 422);
+            }
+
             if (Quiz::where('course_code', $formattedCourseCode)->where('task_number', $taskNumber)->exists()) {
                 return response()->json(['message' => 'Tugas untuk minggu ini sudah ada'], 422);
             }
@@ -204,11 +272,9 @@ class LecturerCourseController extends Controller
             }
 
             $quiz = Quiz::create([
-                'course_id' => $course->id,
                 'course_code' => $formattedCourseCode,
                 'task_number' => $taskNumber,
                 'title' => $title,
-                'week' => $week,
                 'start_time' => now(),
                 'end_time' => now()->addDays(7),
             ]);
@@ -227,12 +293,18 @@ class LecturerCourseController extends Controller
             ]);
 
             return redirect()->route('lecturer.course.show', ['courseCode' => $courseCode])
-                ->with('success', "Tugas: {$title} dibuat dengan 10 soal");
+                ->with('success', "Tugas: {$title} dibuat dengan {$questions->count()} soal");
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::warning("Validation failed for quiz creation", ['errors' => $e->errors(), 'courseCode' => $courseCode]);
+            Log::warning("Validation failed for quiz creation", [
+                'errors' => $e->errors(),
+                'course_code' => $courseCode
+            ]);
             return response()->json(['error' => 'Validation failed', 'messages' => $e->errors()], 422);
         } catch (\Exception $e) {
-            Log::error("Error creating quiz: {$e->getMessage()}", ['courseCode' => $courseCode]);
+            Log::error("Error creating quiz: {$e->getMessage()}", [
+                'course_code' => $courseCode,
+                'week' => $request->week
+            ]);
             return response()->json(['message' => 'Gagal membuat tugas'], 500);
         }
     }
@@ -250,11 +322,17 @@ class LecturerCourseController extends Controller
                 'end_time' => $request->end_time,
             ]);
 
-            Log::info("Quiz updated", ['quiz_id' => $quiz->id, 'course_code' => $courseCode]);
+            Log::info("Quiz updated", [
+                'quiz_id' => $quiz->id,
+                'course_code' => $courseCode
+            ]);
 
             return response()->json(['message' => 'Tugas berhasil diperbarui']);
         } catch (\Exception $e) {
-            Log::error("Error updating quiz: {$e->getMessage()}", ['quiz_id' => $quiz->id, 'courseCode' => $courseCode]);
+            Log::error("Error updating quiz: {$e->getMessage()}", [
+                'quiz_id' => $quiz->id,
+                'course_code' => $courseCode
+            ]);
             return response()->json(['message' => 'Gagal memperbarui tugas'], 500);
         }
     }
@@ -263,10 +341,16 @@ class LecturerCourseController extends Controller
     {
         try {
             $quiz->delete();
-            Log::info("Quiz deleted", ['quiz_id' => $quiz->id, 'course_code' => $courseCode]);
+            Log::info("Quiz deleted", [
+                'quiz_id' => $quiz->id,
+                'course_code' => $courseCode
+            ]);
             return response()->json(['message' => 'Tugas berhasil dihapus']);
         } catch (\Exception $e) {
-            Log::error("Error deleting quiz: {$e->getMessage()}", ['quiz_id' => $quiz->id, 'courseCode' => $courseCode]);
+            Log::error("Error deleting quiz: {$e->getMessage()}", [
+                'quiz_id' => $quiz->id,
+                'course_code' => $courseCode
+            ]);
             return response()->json(['message' => 'Gagal menghapus tugas'], 500);
         }
     }

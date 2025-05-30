@@ -9,21 +9,20 @@ class StudentAttempt extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['student_id', 'quiz_id', 'score'];
+    protected $fillable = ['student_id', 'quiz_id', 'course_id', 'task_number', 'score'];
 
-    /**
-     * Relasi dengan model Student
-     */
     public function student()
     {
         return $this->belongsTo(Student::class);
     }
 
-    /**
-     * Relasi dengan model Quiz
-     */
     public function quiz()
     {
         return $this->belongsTo(Quiz::class);
+    }
+
+    public function course()
+    {
+        return $this->belongsTo(Course::class);
     }
 }
