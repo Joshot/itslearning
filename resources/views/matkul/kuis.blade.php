@@ -57,6 +57,7 @@
         border-radius: 8px;
         background: #f1f5f9;
         transition: background 0.2s ease;
+        cursor: pointer;
     }
 
     .sidebar-header a:hover {
@@ -158,12 +159,13 @@
         width: 100%;
         padding: 0.75rem 1rem;
         margin: 0.5rem 0;
-        background: #ffffff;
+        background: white;
         border: 2px solid #e5e7eb;
         border-radius: 8px;
         font-size: 1rem;
-        cursor: pointer;
+        cursor: text;
         transition: all 0.2s ease;
+        user-select: none;
     }
 
     .option-btn:hover {
@@ -193,16 +195,33 @@
         display: none;
     }
 
-    .result-card {
+    .feedback-message {
+        font-size: 0.9rem;
+        color: #4b5563;
+        margin-top: 0.2rem;
+    }
+
+    .correct-answer-card {
+        background: #f0fdf4;
+        border: 1px solid #22c55e;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        color: #166534;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .result-card, .summary-card {
         background: #f1f5f9;
         border-radius: 0.75rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 1rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     .btn {
-        padding: 0.75rem 1.5rem;
+        padding: 0.75rem 1rem;
         border-radius: 0.5rem;
         font-size: 1rem;
         font-weight: 500;
@@ -217,7 +236,7 @@
     }
 
     .btn-primary:hover {
-        background: #0d4a6b;
+        background: #0d4f6b;
         transform: translateY(-2px);
     }
 
@@ -348,8 +367,7 @@
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Soal</h3>
             <div class="nav-grid">
                 @foreach ($questions as $index => $question)
-                <div class="nav-item {{ isset($studentAnswers[$question->id]) ? 'answered' : '' }}
-                                {{ isset($attempt) && isset($studentAnswers[$question->id]) ? ($studentAnswers[$question->id]->is_correct ? 'correct' : 'incorrect') : '' }}"
+                <div class="nav-item {{ isset($studentAnswers[$question->id]) ? ($studentAnswers[$question->id]->is_correct ? 'correct' : 'incorrect') : '' }}"
                      id="nav-{{ $index + 1 }}"
                      onclick="showQuestion({{ $index + 1 }})">
                     {{ $index + 1 }}
@@ -370,22 +388,43 @@
                 <a href="{{ route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))]) }}"
                    class="btn btn-primary mt-4 inline-block">Kembali ke Kursus</a>
             </div>
+            <div class="summary-card">
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Ringkasan</h3>
+                @php
+                $easyCorrect = $studentAnswers->filter(function($answer) use ($questions) {
+                $question = $questions->firstWhere('id', $answer->question_id);
+                return $question && $question->difficulty == 'easy' && $answer->is_correct;
+                })->count();
+                $mediumCorrect = $studentAnswers->filter(function($answer) use ($questions) {
+                $question = $questions->firstWhere('id', $answer->question_id);
+                return $question && $question->difficulty == 'medium' && $answer->is_correct;
+                })->count();
+                $hardCorrect = $studentAnswers->filter(function($answer) use ($questions) {
+                $question = $questions->firstWhere('id', $answer->question_id);
+                return $question && $question->difficulty == 'hard' && $answer->is_correct;
+                })->count();
+                @endphp
+                <p>Easy: {{ $easyCorrect }} benar</p>
+                <p>Medium: {{ $mediumCorrect }} benar</p>
+                <p>Hard: {{ $hardCorrect }} benar</p>
+            </div>
             @foreach ($questions as $index => $question)
             <div class="question-card" id="question-{{ $index + 1 }}">
                 <h4>Soal {{ $index + 1 }} ({{ ucfirst($question->difficulty) }})</h4>
                 <p>{{ $question->question_text }}</p>
+                @if (isset($studentAnswers[$question->id]) && !$studentAnswers[$question->id]->is_correct)
+                <div class="correct-answer-card">
+                    Jawaban yang benar: {{ $question->correct_option }}. {{ $question->{'option_' . strtolower($question->correct_option)} }}
+                </div>
+                @endif
                 @foreach (['A', 'B', 'C', 'D'] as $option)
                 @php
                 $isSelected = isset($studentAnswers[$question->id]) && $studentAnswers[$question->id]->selected_option == $option;
-                $isCorrectOption = $question->correct_option == $option;
-                $isIncorrect = $isSelected && !$studentAnswers[$question->id]->is_correct;
+                $isCorrectAnswer = isset($studentAnswers[$question->id]) && $studentAnswers[$question->id]->is_correct;
                 @endphp
-                <div class="option-btn {{ $isSelected ? 'active' : '' }} {{ $isCorrectOption ? 'correct' : ($isIncorrect ? 'incorrect' : '') }}">
+                <div class="option-btn {{ $isSelected ? ($isCorrectAnswer ? 'correct' : 'incorrect') : '' }}">
                     {{ $option }}. {{ $question->{'option_' . strtolower($option)} }}
                 </div>
-                @if ($isSelected && !$isCorrectOption)
-                <p class="text-sm text-gray-600 mt-2">Jawaban yang benar: {{ $question->correct_option }}. {{ $question->{'option_' . strtolower($question->correct_option)} }}</p>
-                @endif
                 @endforeach
             </div>
             @endforeach
@@ -399,11 +438,12 @@
                     @foreach (['A', 'B', 'C', 'D'] as $option)
                     <input type="radio" name="answers[{{ $question->id }}]" value="{{ $option }}"
                            id="option-{{ $question->id }}-{{ $option }}"
-                           class="option-input" onchange="markAnswered({{ $index + 1 }})">
+                           class="option-input" onchange="markAnswered({{ $index + 1 }}, '{{ $option }}', '{{ $question->{'option_' . strtolower($option)} }}')">
                     <label for="option-{{ $question->id }}-{{ $option }}" class="option-btn">
                         {{ $option }}. {{ $question->{'option_' . strtolower($option)} }}
                     </label>
                     @endforeach
+                    <p class="feedback-message" id="feedback-{{ $index + 1 }}"></p>
                 </div>
                 @endforeach
 
@@ -426,11 +466,30 @@
 
     function showQuestion(number) {
         if (number < 1 || number > totalQuestions) return;
-        document.querySelectorAll('.question-card').forEach(card => card.style.display = @if(!isset($attempt)) 'none' @else 'block' @endif);
+
+        console.log('Showing question:', number);
+
         const targetQuestion = document.getElementById(`question-${number}`);
+
+    @if (!isset($attempt))
+            // Quiz mode: Show one question at a time
+            document.querySelectorAll('.question-card').forEach(card => {
+                card.style.display = 'none';
+            });
+        if (targetQuestion) {
+            targetQuestion.style.display = 'block';
+        } else {
+            console.error('Question not found:', `question-${number}`);
+        }
+    @else
+        // Review mode: Scroll to question
         if (targetQuestion) {
             targetQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            console.error('Question not found:', `question-${number}`);
         }
+    @endif
+
         currentQuestion = number;
 
     @if (!isset($attempt))
@@ -439,22 +498,28 @@
         document.getElementById('submit-btn').style.display = currentQuestion === totalQuestions ? 'inline-block' : 'none';
     @endif
 
-        updateActiveStates();
+        updateActiveButtons();
     }
 
     function navigateQuestion(direction) {
+        console.log('Navigating:', direction);
         showQuestion(currentQuestion + direction);
     }
 
-    function markAnswered(questionNumber) {
+    function markAnswered(questionNumber, option, optionText) {
+        console.log('Answer selected:', { questionNumber, option });
         const navItem = document.getElementById(`nav-${questionNumber}`);
         if (navItem) {
             navItem.classList.add('answered');
         }
-        updateActiveStates();
+        const feedback = document.getElementById(`feedback-${questionNumber}`);
+        if (feedback) {
+            feedback.textContent = `Anda memilih: ${option}. ${optionText}`;
+        }
+        updateActiveButtons();
     }
 
-    function updateActiveStates() {
+    function updateActiveButtons() {
         document.querySelectorAll('.question-card').forEach(card => {
             const inputs = card.querySelectorAll('.option-input');
             const labels = card.querySelectorAll('.option-btn');
@@ -462,47 +527,54 @@
             inputs.forEach(input => {
                 if (input.checked) {
                     const label = document.querySelector(`label[for="${input.id}"]`);
-                    if (label) label.classList.add('active');
+                    if (label) {
+                        label.classList.add('active');
+                    }
                 }
             });
         });
     }
 
-    document.getElementById('quiz-form')?.addEventListener('submit', function(event) {
-        event.preventDefault();
-        const form = event.target;
-        const inputs = form.querySelectorAll('input[type="radio"]:checked');
+    const quizForm = document.getElementById('quiz-form');
+    if (quizForm) {
+        quizForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const checkedInputs = quizForm.querySelectorAll('input[type="radio"]:checked');
 
-        if (inputs.length < totalQuestions) {
-            Swal.fire({
-                title: 'Peringatan!',
-                text: 'Harap jawab semua soal sebelum mengirimkan kuis.',
-                icon: 'warning',
-                confirmButtonColor: '#106587'
-            });
-            return;
-        }
+            console.log('Form submitted, checked inputs:', checkedInputs.length);
 
-        Swal.fire({
-            title: 'Konfirmasi',
-            text: 'Apakah Anda yakin ingin mengirimkan kuis? Jawaban tidak dapat diubah setelah ini.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#106587',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Kirim',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                form.submit();
+            if (checkedInputs.length < totalQuestions) {
+                Swal.fire({
+                    title: 'Peringatan',
+                    text: 'Harap isi semua jawaban sebelum mengirimkan kuis.',
+                    icon: 'warning',
+                    confirmButtonColor: '#106587'
+                });
+                return;
             }
-        });
-    });
 
-    updateActiveStates();
+            Swal.fire({
+                title: 'Konfirmasi',
+                text: 'Apakah Anda yakin ingin mengirimkan kuis? Jawaban tidak dapat diubah setelah ini.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#106587',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Kirim',
+                cancelButtonText: 'Batal'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    quizForm.submit();
+                }
+            });
+        });
+    }
+
+    // Initialize
+    updateActiveButtons();
     @if (isset($score))
         Swal.fire({
-            title: 'Kuis Selesai!',
+            title: 'Kuis Selesai',
             text: 'Skor Anda: {{ $score }}/100',
             icon: 'success',
             confirmButtonColor: '#106587'

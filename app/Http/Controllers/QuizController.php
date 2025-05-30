@@ -33,20 +33,29 @@ class QuizController extends Controller
             ->where('task_number', $quiz->task_number)
             ->first();
 
-        if ($existingAttempt) {
-            Log::warning("Quiz already attempted", ['studentId' => $studentId, 'quizId' => $quizId]);
-            return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
-                ->with('error', 'Anda sudah mengerjakan kuis ini.');
-        }
-
         $questions = $this->getQuestionsForQuiz($quizId, $course->id, $quiz->task_number);
         if ($questions->count() < 10) {
             Log::error("Insufficient questions", ['quizId' => $quizId, 'questionCount' => $questions->count()]);
-            return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
-                ->with('error', 'Tidak cukup soal untuk kuis ini.');
+            return redirect()->back()->with('error', 'Tidak cukup soal untuk kuis ini.');
         }
 
-        return view('matkul.kuis', compact('questions', 'courseCode', 'quizId', 'course', 'quiz'));
+        Log::info("Questions fetched", ['questionIds' => $questions->pluck('id')->toArray()]);
+
+        if ($existingAttempt) {
+            $studentAnswers = StudentAnswer::where('attempt_id', $existingAttempt->id)->get()->keyBy('question_id');
+            return view('matkul.kuis', [
+                'quiz' => $quiz,
+                'questions' => $questions,
+                'courseCode' => $courseCode,
+                'quizId' => $quizId,
+                'course' => $course,
+                'attempt' => $existingAttempt,
+                'studentAnswers' => $studentAnswers,
+                'score' => $existingAttempt->score,
+            ]);
+        }
+
+        return view('matkul.kuis', compact('quiz', 'questions', 'courseCode', 'quizId', 'course'));
     }
 
     public function submitQuiz(Request $request, $courseCode, $quizId)
@@ -65,8 +74,7 @@ class QuizController extends Controller
 
         if ($existingAttempt) {
             Log::warning("Quiz already attempted on submit", ['studentId' => $studentId, 'quizId' => $quizId]);
-            return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
-                ->with('error', 'Anda sudah mengerjakan kuis ini.');
+            return redirect()->back()->with('error', 'Anda telah mengerjakan kuis ini.');
         }
 
         $answers = $request->input('answers', []);
@@ -74,7 +82,7 @@ class QuizController extends Controller
 
         if (count($answers) < $questions->count()) {
             Log::warning("Incomplete answers", ['answered' => count($answers), 'required' => $questions->count()]);
-            return redirect()->back()->with('error', 'Harap jawab semua soal sebelum mengirimkan kuis.');
+            return redirect()->back()->with('error', 'Harap isi semua jawaban sebelum mengirimkan kuis.');
         }
 
         $attempt = StudentAttempt::create([
@@ -116,13 +124,13 @@ class QuizController extends Controller
 
         // Hard scoring: 20 for first, 15 for each additional
         if ($hardCorrectCount >= 1) {
-            $score += 20; // First hard correct
+            $score += 20;
         }
         if ($hardCorrectCount >= 2) {
-            $score += 15; // Second hard correct
+            $score += 15;
         }
-        if ($hardCorrectCount == 3) {
-            $score += 15; // Third hard correct
+        if ($hardCorrectCount >= 3) {
+            $score += 15;
         }
 
         $attempt->score = $score;
@@ -133,15 +141,16 @@ class QuizController extends Controller
             'quizId' => $quizId,
             'score' => $score,
             'hardCorrect' => $hardCorrectCount,
+            'answers' => $answers,
         ]);
 
         $studentAnswers = StudentAnswer::where('attempt_id', $attempt->id)->get()->keyBy('question_id');
         return view('matkul.kuis', [
+            'quiz' => $quiz,
             'questions' => $questions,
             'courseCode' => $courseCode,
             'quizId' => $quizId,
             'course' => $course,
-            'quiz' => $quiz,
             'attempt' => $attempt,
             'studentAnswers' => $studentAnswers,
             'score' => $score,
