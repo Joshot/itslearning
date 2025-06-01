@@ -81,14 +81,14 @@
         background: #0d4a6b;
         transform: translateY(-2px);
     }
-    .quiz-card {
+    .quiz-card, .feedback-card {
         background: #f9fafb;
         padding: 1rem;
         border-radius: 0.5rem;
         margin-bottom: 0.75rem;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
-    .quiz-card p {
+    .quiz-card p, .feedback-card p {
         margin: 0;
         font-size: 0.875rem;
         color: #374151;
@@ -165,11 +165,11 @@
             <h2 class="text-xl font-semibold text-gray-800 text-center mb-6">
                 {{ $course->course_name ?? 'Unnamed Course' }}
             </h2>
-            <h3 class="text-base font-semibold text-gray-700 mb-4">Nilai Kuis</h3>
+            <h3 class="text-base font-semibold text-gray-700 mb-4">Nilai Tugas</h3>
             <div class="space-y-3">
                 @for ($i = 1; $i <= 4; $i++)
                 <div class="quiz-card">
-                    <p class="font-semibold">Kuis {{ $i }}</p>
+                    <p class="font-semibold">Tugas {{ $i }}</p>
                     <p class="text-gray-600">
                         @if (isset($quizScores[$i]))
                         <strong>{{ $quizScores[$i] }}/100</strong>
@@ -179,6 +179,15 @@
                     </p>
                 </div>
                 @endfor
+                @if ($feedback)
+                <div class="feedback-card">
+                    <p class="font-semibold">Feedback</p>
+                    <p class="text-gray-600">
+                        <a href="{{ route('feedback.show', ['courseCode' => $courseCodeWithoutDash]) }}"
+                           class="action-btn">Lihat Feedback</a>
+                    </p>
+                </div>
+                @endif
             </div>
         </div>
 
@@ -225,16 +234,16 @@
 
                     @if ($quizWeek)
                     <div class="mt-4 quiz-card">
-                        <p class="text-gray-700 font-semibold text-sm">Kuis {{ $quizId }}</p>
+                        <p class="text-gray-700 font-semibold text-sm">Tugas {{ $quizId }}</p>
                         @if ($quizCompleted)
-                        <p class="text-gray-500 text-sm">Sudah mengerjakan Kuis</p>
+                        <p class="text-gray-500 text-sm">Sudah mengerjakan Tugas</p>
                         @elseif ($quizAvailable)
                         <a href="#" onclick="confirmStartQuiz('{{ route('kuis.start', ['courseCode' => $courseCodeWithoutDash, 'quizId' => $availableQuizzes[$quizId]]) }}', {{ $quizId }})"
                            class="btn btn-primary mt-2 inline-block">
-                            Mulai Kuis {{ $quizId }}
+                            Mulai Tugas {{ $quizId }}
                         </a>
                         @else
-                        <p class="text-gray-500 text-sm">Kuis belum tersedia</p>
+                        <p class="text-gray-500 text-sm">Tugas belum tersedia</p>
                         @endif
                     </div>
                     @endif
@@ -245,6 +254,7 @@
     </div>
 </div>
 
+<!-- ... (bagian lain tetap sama) ... -->
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -267,8 +277,8 @@
 
     function confirmStartQuiz(url, quizNumber) {
         Swal.fire({
-            title: 'Mulai Kuis',
-            text: `Apakah Anda ingin memulai Kuis ${quizNumber}?`,
+            title: 'Mulai Tugas',
+            text: `Apakah Anda ingin memulai Tugas ${quizNumber}?`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#106587',
@@ -287,10 +297,29 @@
     document.addEventListener('DOMContentLoaded', function() {
         let quizData = @json(session('quiz_completed'));
         Swal.fire({
-            title: `Kuis ${quizData.quiz_number} Selesai!`,
+            title: `Tugas ${quizData.quiz_number} Selesai!`,
             text: `Skor Anda: ${quizData.score}/100`,
             icon: 'success',
             confirmButtonColor: '#106587'
+        });
+    });
+</script>
+@endif
+@if ($feedback)
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+            title: 'Feedback Tersedia!',
+            text: 'Halo bro, feedback tugasmu udah ada! Cek sekarang yuk!',
+            icon: 'success',
+            confirmButtonColor: '#106587',
+            showCancelButton: true,
+            confirmButtonText: 'Lihat Feedback',
+            cancelButtonText: 'Nanti'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '{{ route('feedback.show', ['courseCode' => $courseCodeWithoutDash]) }}';
+            }
         });
     });
 </script>

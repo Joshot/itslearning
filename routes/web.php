@@ -3,6 +3,7 @@
 use App\Filament\Pages\CourseAssignments;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\LecturerAuthController;
 use App\Http\Controllers\LecturerCourseController;
 use App\Http\Controllers\ProfileController;
@@ -29,6 +30,7 @@ Route::middleware(['auth:student'])->group(function () {
     Route::get('/course/{courseCode}', [CourseController::class, 'show'])->name('course.show');
     Route::get('/quiz/{courseCode}/{quizId}', [QuizController::class, 'startQuiz'])->name('kuis.start');
     Route::post('/quiz/{courseCode}/{quizId}', [QuizController::class, 'submitQuiz'])->name('kuis.submit');
+    Route::get('/feedback/{courseCode}', [FeedbackController::class, 'show'])->name('feedback.show');
     Route::get('/profile/student', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile/student', [ProfileController::class, 'update'])->name('profile.update');
 });
