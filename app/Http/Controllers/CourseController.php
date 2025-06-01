@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\CourseMaterial;
 use App\Models\Quiz;
 use App\Models\StudentAttempt;
+use App\Models\Feedback;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -61,12 +62,18 @@ class CourseController extends Controller
             $quizScores[$i] = $attempt ? $attempt->score : null;
         }
 
+        // Cek feedback untuk alert
+        $feedback = Feedback::where('student_id', $studentId)
+            ->where('course_id', $course->id)
+            ->first();
+
         Log::info("Course data for {$formattedCourseCode}", [
             'courseName' => $course->course_name,
             'formattedCourseCode' => $formattedCourseCode,
             'materials' => $materials,
             'quizScores' => $quizScores,
             'availableQuizzes' => $availableQuizzes,
+            'feedbackExists' => !is_null($feedback),
         ]);
 
         return view('matkul.course', compact(
@@ -75,7 +82,8 @@ class CourseController extends Controller
             'course',
             'materials',
             'quizScores',
-            'availableQuizzes'
+            'availableQuizzes',
+            'feedback'
         ));
     }
 }
