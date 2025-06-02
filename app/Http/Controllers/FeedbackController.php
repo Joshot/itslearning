@@ -33,14 +33,34 @@ class FeedbackController extends Controller
                 ->with('error', 'Feedback belum tersedia.');
         }
 
-        // Decode JSON fields
-        $question_distribution = json_decode($feedback->question_distribution, true) ?? ['easy' => 9, 'medium' => 6, 'hard' => 5];
-        $question_weights = json_decode($feedback->question_weights, true) ?? ['easy' => 2.8, 'medium' => 5.6, 'hard' => 8.3];
-        $failed_tasks = json_decode($feedback->failed_tasks, true) ?? [];
-        $scores = [];
-        $grades = [];
+        $question_distribution = json_decode($feedback->question_distribution, true);
+        $question_weights = json_decode($feedback->question_weights, true);
+        $failed_tasks = json_decode($feedback->failed_tasks, true);
 
-        // Ambil skor dan grade dari student_attempts
+        if (!$question_distribution || !$question_weights || !is_array($failed_tasks)) {
+            Log::error("Invalid feedback data", [
+                'studentId' => $studentId,
+                'courseId' => $course->id,
+                'distribution' => $feedback->question_distribution,
+                'weights' => $feedback->question_weights,
+                'failed_tasks' => $feedback->failed_tasks
+            ]);
+            return redirect()->route('course.show', ['courseCode' => $courseCodeWithoutDash])
+                ->with('error', 'Data feedback tidak valid.');
+        }
+
+        // Validasi distribusi
+        $total_questions = $question_distribution['easy'] + $question_distribution['medium'] + $question_distribution['hard'];
+        if ($total_questions != 20 || $question_distribution['easy'] <= $question_distribution['medium'] || $question_distribution['medium'] < $question_distribution['hard']) {
+            Log::error("Invalid question distribution in feedback", [
+                'studentId' => $studentId,
+                'courseId' => $course->id,
+                'distribution' => $question_distribution
+            ]);
+            return redirect()->route('course.show', ['courseCode' => $courseCodeWithoutDash])
+                ->with('error', 'Distribusi soal tidak valid.');
+        }
+
         $attempts = StudentAttempt::where('student_id', $studentId)
             ->where('course_id', $course->id)
             ->whereIn('task_number', [1, 2, 3, 4])
@@ -52,6 +72,8 @@ class FeedbackController extends Controller
             60 => 'C+', 55 => 'C', 45 => 'D', 0 => 'E'
         ];
 
+        $scores = [];
+        $grades = [];
         foreach ([1, 2, 3, 4] as $task) {
             $score = $attempts[$task] ?? 0;
             $scores[$task] = $score;
@@ -65,7 +87,6 @@ class FeedbackController extends Controller
             $grades[$task] = $grade;
         }
 
-        // Cek tugas tambahan
         $additionalAttempt = StudentAttempt::where('student_id', $studentId)
             ->where('course_id', $course->id)
             ->where('task_number', 5)
