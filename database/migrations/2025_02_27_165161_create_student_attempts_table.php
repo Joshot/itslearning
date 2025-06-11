@@ -13,6 +13,7 @@ return new class extends Migration {
             $table->foreignId('course_id')->constrained('courses')->onDelete('cascade');
             $table->unsignedTinyInteger('task_number');
             $table->integer('score');
+            $table->json('errors')->nullable(); // Kolom baru untuk menyimpan errors
             $table->timestamps();
         });
     }

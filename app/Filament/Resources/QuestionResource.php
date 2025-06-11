@@ -20,12 +20,31 @@ class QuestionResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('quiz_id')
-                    ->relationship('quiz', 'title', fn ($query) => $query->whereHas('course'))
+                Forms\Components\Select::make('task_number')
+                    ->label('Nomor Tugas')
+                    ->options(
+                        \App\Models\Question::with('course')
+                            ->distinct()
+                            ->pluck('task_number')
+                            ->mapWithKeys(function ($taskNumber) {
+                                $question = \App\Models\Question::where('task_number', $taskNumber)
+                                    ->with('course')
+                                    ->first();
+                                return [
+                                    $taskNumber => 'Tugas ' . $taskNumber . ' (' . ($question->course?->course_name ?? 'Tanpa Course') . ')'
+                                ];
+                            })
+                    )
                     ->searchable()
                     ->required()
-                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->title . ' (' . ($record->course?->course_name ?? 'No Course') . ')')
-                    ->default(null)
+                    ->reactive(),
+                Forms\Components\Select::make('course_id')
+                    ->label('Course')
+                    ->options(
+                        \App\Models\Course::pluck('course_name', 'id')
+                    )
+                    ->searchable()
+                    ->required()
                     ->reactive(),
                 Forms\Components\Textarea::make('question_text')
                     ->required()
@@ -65,12 +84,11 @@ class QuestionResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('quiz.title')
-                    ->label('Quiz')
+                Tables\Columns\TextColumn::make('task_number')
+                    ->label('Nomor Tugas')
                     ->searchable()
-                    ->sortable()
-                    ->default('-'),
-                Tables\Columns\TextColumn::make('quiz.course.course_name')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('course.course_name')
                     ->label('Course')
                     ->searchable()
                     ->sortable()
@@ -99,12 +117,16 @@ class QuestionResource extends Resource
                         'medium' => 'Medium',
                         'hard' => 'Hard',
                     ]),
-                Tables\Filters\SelectFilter::make('quiz_id')
-                    ->relationship('quiz', 'title', fn ($query) => $query->whereHas('course'))
-                    ->label('Quiz'),
-                Tables\Filters\SelectFilter::make('course_code')
-                    ->relationship('quiz.course', 'course_name')
-                    ->label('Course'),
+                Tables\Filters\SelectFilter::make('task_number')
+                    ->label('Nomor Tugas')
+                    ->options(
+                        \App\Models\Question::distinct()->pluck('task_number', 'task_number')
+                    ),
+                Tables\Filters\SelectFilter::make('course_id')
+                    ->label('Kursus')
+                    ->options(
+                        \App\Models\Course::pluck('course_name', 'id')
+                    ),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

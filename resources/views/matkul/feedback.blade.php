@@ -65,7 +65,7 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    /* Additional task card, positioned top-right in feedback container */
+    /* Additional task card */
     .additional-task-card {
         background: #ffffff;
         padding: 1.25rem;
@@ -80,7 +80,7 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    /* Ensure main card and additional task card align in one row with equal height */
+    /* Card row for main feedback and additional task */
     .card-row {
         display: flex;
         gap: 1.25rem;
@@ -187,6 +187,17 @@
         font-weight: 600;
     }
 
+    /* List styling */
+    ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+    }
+    li {
+        color: #4b5563;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+
     /* Responsive design */
     @media (max-width: 1400px) {
         .dashboard-container {
@@ -274,7 +285,7 @@
 <div class="container">
     <div class="dashboard-container">
         <div class="sidebar">
-            <div>
+            <div class="sidebar-wrapper">
                 <div class="sidebar-header">
                     <a href="{{ route('course.show', ['courseCode' => $courseCode]) }}" class="back-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -290,10 +301,10 @@
                 </h2>
                 <h3 class="text-base font-semibold text-gray-700 mb-3">Nilai Tugas</h3>
                 <div class="space-y-3">
-                    @foreach ($scores as $task => $score)
+                    @foreach ($scores as $task => $scoreData)
                     <div class="score-card">
                         <p class="font-semibold">Tugas {{ $task }}</p>
-                        <p class="score-value">{{ $score }}/100 ({{ $grades[$task] }})</p>
+                        <p class="score-value">{{ $scoreData['score'] }}/100 ({{ $grades[$task] }})</p>
                     </div>
                     @endforeach
                     <div class="score-card">
@@ -307,7 +318,26 @@
             <h1 class="text-2xl font-semibold mb-6 text-gray-800">Feedback Kursus {{ $course->course_name }}</h1>
             <div class="card-row">
                 <div class="main-feedback-card">
-                    <p class="text-gray-700">masih kosong :(</p>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Feedback</h3>
+                    <p class="text-gray-700 whitespace-pre-line">{!! nl2br(e($feedback->description)) !!}</p>
+
+                    @if (!empty($failed_task_materials))
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">Materi Tugas yang Gagal</h3>
+                    <ul class="list-disc pl-5 text-gray-700">
+                        @foreach ($failed_task_materials as $task => $material)
+                        <li>Tugas {{ $task }}: {{ $material }}</li>
+                        @endforeach
+                    </ul>
+                    @endif
+
+                    @if (!empty($task_distribution))
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">Calon Soal Tugas Tambahan</h3>
+                    <ul class="list-disc pl-5 text-gray-700">
+                        @foreach ($task_distribution as $task => $dist)
+                        <li>Tugas {{ $task }}: Easy {{ $dist['easy'] }}, Medium {{ $dist['medium'] }}, Hard {{ $dist['hard'] }}</li>
+                        @endforeach
+                    </ul>
+                    @endif
                 </div>
                 <div class="additional-task-wrapper">
                     @if ($feedback && $feedback->additional_quiz_id && !$additionalAttempt)
@@ -351,6 +381,21 @@
             }
         });
     }
+
+    @if (session('feedback_popup'))
+        Swal.fire({
+            title: '{{ session('feedback_popup.title') }}',
+            text: `{!! nl2br(e(session('feedback_popup.text'))) !!}`,
+            icon: 'info',
+            confirmButtonColor: '#106587',
+            confirmButtonText: 'Lihat Detail',
+            allowOutsideClick: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '{{ session('feedback_popup.redirect') }}';
+            }
+        });
+    @endif
 </script>
 @endpush
 @endsection
