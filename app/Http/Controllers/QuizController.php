@@ -588,7 +588,7 @@ class QuizController extends Controller
                 if ($score >= $threshold) {
                     $gradeLetter = $letter;
                     break;
-                }
+                } 
             }
             $feedbackText .= "- Tugas $task: $score/100 ($gradeLetter)" . (in_array($task, array_keys($failedTasks)) ? " [GAGAL]" : "") . "\n";
         }
