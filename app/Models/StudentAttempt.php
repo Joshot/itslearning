@@ -9,11 +9,7 @@ class StudentAttempt extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['student_id', 'quiz_id', 'course_id', 'task_number', 'score', 'errors'];
-
-    protected $casts = [
-        'errors' => 'array',
-    ];
+    protected $fillable = ['student_id', 'quiz_id', 'course_id', 'task_number', 'score', 'errors_easy', 'errors_medium', 'errors_hard'];
 
     public function student()
     {
