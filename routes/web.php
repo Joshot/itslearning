@@ -46,6 +46,8 @@ Route::middleware(['auth:lecturer'])->group(function () {
     Route::patch('/lecturer/course/{courseCode}/quiz/{quiz}', [LecturerCourseController::class, 'updateQuiz'])->name('lecturer.course.quiz.update');
     Route::delete('/lecturer/course/{courseCode}/quiz/{quiz}', [LecturerCourseController::class, 'deleteQuiz'])->name('lecturer.course.quiz.delete');
     Route::get('/lecturer/course/{courseCode}/bank-soal', [LecturerCourseController::class, 'showBankSoal'])->name('lecture.banksoal');
+    Route::get('/lecturer/course/{courseCode}/student-tasks', [LecturerCourseController::class, 'getStudentTasks'])->name('lecturer.course.student-tasks');
+    Route::get('/lecturer/course/{courseCode}/student-tasks/{task_number}', [LecturerCourseController::class, 'getTaskDetails'])->name('lecturer.course.student-tasks.details');
     Route::get('/profile/lecturer', [ProfileController::class, 'edit'])->name('profile.edit.lecturer');
     Route::patch('/profile/lecturer', [ProfileController::class, 'update'])->name('profile.update.lecturer');
 });

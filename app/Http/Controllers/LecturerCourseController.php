@@ -7,6 +7,7 @@ use App\Models\CourseMaterial;
 use App\Models\CourseAssignment;
 use App\Models\Quiz;
 use App\Models\Question;
+use App\Models\StudentAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -32,7 +33,7 @@ class LecturerCourseController extends Controller
 
         if (!$course) {
             Log::error("Course not found for code: {$formattedCourseCode}");
-            return redirect()->route('lecture.dashboard')->with('error', 'Course not found');
+            return redirect()->route('lecturer.dashboard')->with('error', 'Course not found');
         }
 
         $courseMaterials = CourseMaterial::where('course_id', $course->id)->get();
@@ -363,5 +364,67 @@ class LecturerCourseController extends Controller
         $questions = Question::where('course_id', $course->id)->get();
 
         return view('lecture.banksoal', compact('course', 'questions', 'courseCodeWithoutDash'));
+    }
+
+    public function getStudentTasks($courseCode)
+    {
+        try {
+            $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
+            $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+
+            $quizzes = Quiz::where('course_code', $formattedCourseCode)
+                ->select('id', 'title', 'task_number')
+                ->get()
+                ->map(function ($quiz) {
+                    return [
+                        'quiz_id' => $quiz->id,
+                        'task_number' => $quiz->task_number,
+                        'title' => $quiz->title
+                    ];
+                })
+                ->sortBy('task_number')
+                ->values();
+
+            return response()->json(['tasks' => $quizzes], 200);
+        } catch (\Exception $e) {
+            Log::error("Error fetching student tasks: {$e->getMessage()}", [
+                'course_code' => $courseCode
+            ]);
+            return response()->json(['message' => 'Gagal memuat data tugas'], 500);
+        }
+    }
+
+    public function getTaskDetails($courseCode, $task_number)
+    {
+        try {
+            $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
+            $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+
+            $attempts = StudentAttempt::where('course_id', $course->id)
+                ->where('task_number', $task_number)
+                ->with('student')
+                ->get()
+                ->map(function ($attempt) {
+                    return [
+                        'quiz_id' => $attempt->quiz_id,
+                        'student_name' => $attempt->student->name,
+                        'student_nim' => $attempt->student->nim,
+                        'score' => $attempt->score,
+                        'errors_easy' => $attempt->errors_easy,
+                        'errors_medium' => $attempt->errors_medium,
+                        'errors_hard' => $attempt->errors_hard
+                    ];
+                })
+                ->sortBy('student_name')
+                ->values();
+
+            return response()->json(['attempts' => $attempts], 200);
+        } catch (\Exception $e) {
+            Log::error("Error fetching task details: {$e->getMessage()}", [
+                'course_code' => $courseCode,
+                'task_number' => $task_number
+            ]);
+            return response()->json(['message' => 'Gagal memuat detail tugas'], 500);
+        }
     }
 }

@@ -98,61 +98,26 @@ use Illuminate\Support\Facades\Session;
     .action-btn:hover {
         color: #0d4a6b;
     }
-    .delete-btn, .edit-btn {
-        color: #dc2626;
-        text-decoration: none;
+    .task-card {
+        background: #f9fafb;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 0.75rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease;
+    }
+    .task-card:hover {
+        transform: translateY(-2px);
+    }
+    .task-card p {
+        margin: 0.25rem 0;
         font-size: 0.875rem;
-        cursor: pointer;
-        margin-left: 0.5rem;
+        color: #374151;
     }
-    .edit-btn {
-        color: #3b82f6;
-    }
-    .delete-btn:hover {
-        color: #b91c1c;
-    }
-    .edit-btn:hover {
-        color: #2563eb;
-    }
-    .container {
-        max-width: 100%;
-        margin: 0 auto;
-        padding: 1.5rem;
-        box-sizing: border-box;
-        padding-bottom: 5rem;
-    }
-    .dashboard-container {
+    .task-buttons {
         display: flex;
-        gap: 1rem;
-        justify-content: center;
-        align-items: stretch;
-        width: 100%;
-        max-width: 80%;
-        margin: 0 auto;
-        min-height: 600px;
-    }
-    .sidebar {
-        flex: 1;
-        padding: 1.5rem;
-        background: white;
-        border-radius: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        position: sticky;
-        top: 1rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        min-height: 600px;
-    }
-    .main-content {
-        flex: 3;
-        padding: 1.5rem;
-        background: white;
-        border-radius: 1rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        overflow-y: auto;
-        min-height: 600px;
-        max-height: 600px;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
     }
     .btn {
         padding: 0.5rem 1rem;
@@ -161,9 +126,6 @@ use Illuminate\Support\Facades\Session;
         font-weight: 500;
         transition: background 0.3s ease, transform 0.2s ease;
         text-align: center;
-        display: block;
-        width: 100%;
-        margin-bottom: 0.5rem;
         border: none;
         cursor: pointer;
     }
@@ -189,6 +151,22 @@ use Illuminate\Support\Facades\Session;
     }
     .btn-info:hover {
         background: #2563eb;
+        transform: translateY(-2px);
+    }
+    .btn-danger {
+        background: #dc2626;
+        color: white;
+    }
+    .btn-danger:hover {
+        background: #b91c1c;
+        transform: translateY(-2px);
+    }
+    .btn-task {
+        background: #6b7280;
+        color: white;
+    }
+    .btn-task:hover {
+        background: #4b5563;
         transform: translateY(-2px);
     }
     input, textarea {
@@ -251,14 +229,14 @@ use Illuminate\Support\Facades\Session;
         border: none;
         padding: 0;
     }
-    .participant-card, .quiz-card {
+    .participant-card {
         background: #f9fafb;
         padding: 0.75rem;
         border-radius: 0.5rem;
         margin-bottom: 0.5rem;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
-    .participant-card p, .quiz-card p {
+    .participant-card p {
         margin: 0;
         font-size: 0.875rem;
         color: #374151;
@@ -280,6 +258,9 @@ use Illuminate\Support\Facades\Session;
     .quiz-edit-form {
         display: none;
         margin-top: 0.5rem;
+        padding: 1rem;
+        background: #f1f5f9;
+        border-radius: 0.5rem;
     }
     .quiz-edit-form.active {
         display: block;
@@ -287,6 +268,67 @@ use Illuminate\Support\Facades\Session;
     .swal2-popup {
         font-size: 1rem !important;
         padding: 1rem !important;
+    }
+    .task-popup {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .task-popup table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+    .task-popup th, .task-popup td {
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        text-align: left;
+    }
+    .task-popup th {
+        background: #106587;
+        color: white;
+    }
+    .task-popup .task-btn {
+        margin: 0.25rem;
+    }
+    .container {
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 1.5rem;
+        box-sizing: border-box;
+        padding-bottom: 5rem;
+    }
+    .dashboard-container {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        align-items: stretch;
+        width: 100%;
+        max-width: 80%;
+        margin: 0 auto;
+        min-height: 600px;
+    }
+    .sidebar {
+        flex: 1;
+        padding: 1.5rem;
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 600px;
+    }
+    .main-content {
+        flex: 3;
+        padding: 1.5rem;
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+        min-height: 600px;
+        max-height: 600px;
     }
     @media (max-width: 1400px) {
         .dashboard-container {
@@ -390,31 +432,31 @@ use Illuminate\Support\Facades\Session;
                         </svg>
                     </a>
                     <div class="px-3 py-1 bg-[#106587] text-white rounded-lg text-sm font-semibold">
-                        {{ $formattedCourseCode ?? 'Unknown Course' }}
+                        {{ $course->course_code ?? 'Unknown Course' }}
                     </div>
                 </div>
                 <h2 class="text-lg font-semibold text-gray-700 text-center mb-4">
                     {{ $course->course_name ?? 'Unnamed Course' }}
                 </h2>
-                <a href="{{ route('lecture.banksoal', ['courseCode' => $courseCodeWithoutDash]) }}" class="btn btn-info">Bank Soal</a>
+                <div class="flex gap-2 mb-4">
+                    <a href="{{ route('lecture.banksoal', ['courseCode' => $courseCodeWithoutDash]) }}" class="btn btn-info flex-1">Bank Soal</a>
+                    <button onclick="showStudentTasks()" class="btn btn-task flex-1">Tugas Mahasiswa</button>
+                </div>
                 <div id="quizzesSection" class="quizzes-section">
                     <h3 class="text-sm font-semibold text-gray-700 mb-2">Daftar Tugas</h3>
                     @if ($quizzes->isEmpty())
                     <p class="text-sm text-gray-600">Belum ada tugas.</p>
                     @else
                     @foreach ($quizzes as $week => $quiz)
-                    <div class="quiz-card">
+                    <div class="task-card">
                         <p><strong>{{ $quiz['title'] }}</strong> (Week {{ $week }})</p>
-                        <p>Task: {{ $quiz['task_number'] }}</p>
-                        <p>Start: {{ \Carbon\Carbon::parse($quiz['start_time'])->format('Y-m-d H:i') }}</p>
-                        <p>End: {{ \Carbon\Carbon::parse($quiz['end_time'])->format('Y-m-d H:i') }}</p>
-                        <p>Total: {{ $quiz['total_questions'] }}</p>
-                        <p>Easy: {{ $quiz['easy_questions'] }}</p>
-                        <p>Medium: {{ $quiz['medium_questions'] }}</p>
-                        <p>Hard: {{ $quiz['hard_questions'] }}</p>
-                        <div class="flex gap-2 mt-2">
-                            <button class="edit-btn" onclick="toggleEditForm({{ $quiz['id'] }})">Edit</button>
-                            <button class="delete-btn" onclick="confirmDeleteQuiz({{ $quiz['id'] }})">Delete</button>
+                        <p>Tugas: {{ $quiz['task_number'] }}</p>
+                        <p>Start: {{ \Carbon\Carbon::parse($quiz['start_time'])->format('H:i l, j F Y') }}</p>
+                        <p>End: {{ \Carbon\Carbon::parse($quiz['end_time'])->format('H:i l, j F Y') }}</p>
+                        <p>Total: {{ $quiz['total_questions'] }} (Easy: {{ $quiz['easy_questions'] }}, Medium: {{ $quiz['medium_questions'] }}, Hard: {{ $quiz['hard_questions'] }})</p>
+                        <div class="task-buttons">
+                            <button class="btn btn-info" onclick="confirmEditQuiz({{ $quiz['id'] }})">Edit</button>
+                            <button class="btn btn-danger" onclick="confirmDeleteQuiz({{ $quiz['id'] }})">Delete</button>
                         </div>
                         <form id="edit-quiz-form-{{ $quiz['id'] }}" class="quiz-edit-form" action="{{ route('lecturer.course.quiz.update', ['courseCode' => $courseCodeWithoutDash, 'quiz' => $quiz['id']]) }}" method="POST" onsubmit="updateQuiz(event, {{ $quiz['id'] }})">
                             @csrf
@@ -462,7 +504,7 @@ use Illuminate\Support\Facades\Session;
             <div class="space-y-4">
                 @foreach ($materials as $week => $material)
                 @php
-                $quizWeeks = [4, 7, 10, 14]; // Daftar minggu kuis
+                $quizWeeks = [4, 7, 10, 14];
                 $quizWeek = in_array($week + 1, $quizWeeks) ? ($week + 1) : null;
                 $quiz = $quizWeek ? ($quizzes[$quizWeek] ?? null) : null;
                 $taskNumber = $quizWeek ? array_search($week + 1, $quizWeeks) + 1 : null;
@@ -508,7 +550,7 @@ use Illuminate\Support\Facades\Session;
                         <form action="{{ route('lecturer.course.material.delete', ['courseCode' => $courseCodeWithoutDash, 'week' => $week + 1, 'index' => $index]) }}" method="POST" style="display:inline;" onsubmit="return confirmDelete(event)">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="delete-btn">Delete</button>
+                            <button type="submit" class="btn btn-danger">Delete</button>
                         </form>
                     </div>
                     @endforeach
@@ -573,6 +615,23 @@ use Illuminate\Support\Facades\Session;
         });
     }
 
+    function confirmEditQuiz(quizId) {
+        Swal.fire({
+            title: 'Konfirmasi',
+            text: 'Apakah Anda yakin ingin mengedit tugas ini?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#106587',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yakin',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                toggleEditForm(quizId);
+            }
+        });
+    }
+
     function toggleEditForm(quizId) {
         const form = document.getElementById(`edit-quiz-form-${quizId}`);
         form.classList.toggle('active');
@@ -583,26 +642,39 @@ use Illuminate\Support\Facades\Session;
         const form = document.getElementById(`edit-quiz-form-${quizId}`);
         const formData = new FormData(form);
 
-        axios.patch(form.action, {
-            title: formData.get('title'),
-            end_time: formData.get('end_time'),
-            _token: document.querySelector('meta[name="csrf-token"]').content
-        }).then(response => {
-            Swal.fire({
-                title: 'Berhasil!',
-                text: response.data.message || 'Tugas diperbarui!',
-                icon: 'success',
-                confirmButtonColor: '#106587'
-            }).then(() => {
-                window.location.reload();
-            });
-        }).catch(error => {
-            Swal.fire({
-                title: 'Error!',
-                text: error.response?.data?.message || 'Gagal memperbarui tugas.',
-                icon: 'error',
-                confirmButtonColor: '#106587'
-            });
+        Swal.fire({
+            title: 'Konfirmasi',
+            text: 'Apakah Anda yakin ingin menyimpan perubahan tugas ini?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#106587',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Simpan',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                axios.patch(form.action, {
+                    title: formData.get('title'),
+                    end_time: formData.get('end_time'),
+                    _token: document.querySelector('meta[name="csrf-token"]').content
+                }).then(response => {
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: response.data.message || 'Tugas diperbarui!',
+                        icon: 'success',
+                        confirmButtonColor: '#106587'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                }).catch(error => {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: error.response?.data?.message || 'Gagal memperbarui tugas.',
+                        icon: 'error',
+                        confirmButtonColor: '#106587'
+                    });
+                });
+            }
         });
     }
 
@@ -618,7 +690,7 @@ use Illuminate\Support\Facades\Session;
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                axios.delete(`/lecturer/course/${{{ json_encode($courseCodeWithoutDash) }}}/quiz/${quizId}`, {
+                axios.delete(`/lecturer/course/{{ $courseCodeWithoutDash }}/quiz/${quizId}`, {
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     }
@@ -640,6 +712,100 @@ use Illuminate\Support\Facades\Session;
                     });
                 });
             }
+        });
+    }
+
+    function showStudentTasks() {
+        axios.get(`/lecturer/course/{{ $courseCodeWithoutDash }}/student-tasks`, {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        }).then(response => {
+            const tasks = response.data.tasks;
+            let html = '<h3>Pilih Tugas:</h3>';
+            tasks.forEach(task => {
+                html += `<button class="btn btn-info task-btn" onclick="showTaskDetails(${task.task_number}, '${task.title}', ${task.quiz_id})">Tugas ${task.task_number}</button>`;
+            });
+
+            Swal.fire({
+                title: 'Tugas Mahasiswa',
+                html: html,
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonColor: '#d33',
+                cancelButtonText: 'Tutup',
+                customClass: {
+                    popup: 'task-popup'
+                }
+            });
+        }).catch(error => {
+            Swal.fire({
+                title: 'Error!',
+                text: error.response?.data?.message || 'Gagal memuat data tugas.',
+                icon: 'error',
+                confirmButtonColor: '#106587'
+            });
+        });
+    }
+
+    function showTaskDetails(taskNumber, taskTitle, quizId) {
+        axios.get(`/lecturer/course/{{ $courseCodeWithoutDash }}/student-tasks/${taskNumber}`, {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        }).then(response => {
+            const attempts = response.data.attempts;
+            let html = `<h3>Detail Tugas ${taskNumber}: ${taskTitle}</h3>`;
+            if (attempts.length === 0) {
+                html += '<p>Belum ada mahasiswa yang mengerjakan tugas ini.</p>';
+            } else {
+                html += `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama (NIM)</th>
+                                <th>Nilai</th>
+                                <th>Kesalahan Easy</th>
+                                <th>Kesalahan Medium</th>
+                                <th>Kesalahan Hard</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                attempts.forEach(attempt => {
+                    if (attempt.quiz_id === quizId) {
+                        html += `
+                            <tr>
+                                <td>${attempt.student_name} (${attempt.student_nim})</td>
+                                <td>${attempt.score}</td>
+                                <td>${attempt.errors_easy}</td>
+                                <td>${attempt.errors_medium}</td>
+                                <td>${attempt.errors_hard}</td>
+                            </tr>
+                        `;
+                    }
+                });
+                html += '</tbody></table>';
+            }
+
+            Swal.fire({
+                title: `Tugas ${taskNumber}`,
+                html: html,
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonColor: '#d33',
+                cancelButtonText: 'Tutup',
+                customClass: {
+                    popup: 'task-popup'
+                }
+            });
+        }).catch(error => {
+            Swal.fire({
+                title: 'Error!',
+                text: error.response?.data?.message || 'Gagal memuat detail tugas.',
+                icon: 'error',
+                confirmButtonColor: '#106587'
+            });
         });
     }
 
