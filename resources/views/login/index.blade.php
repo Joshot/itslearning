@@ -34,6 +34,9 @@
             <button type="submit" class="w-full text-white py-2 rounded hover:bg-blue-600 text-sm sm:text-base" style="background: #106587">Login</button>
         </form>
         <p class="text-center mt-4 text-sm sm:text-base">
+            <a href="{{ route('register') }}" class="text-blue-600 hover:underline">Don't have an account? Register</a>
+        </p>
+        <p class="text-center mt-4 text-sm sm:text-base">
             <a href="{{ route('lecturer.login') }}" class="text-blue-600 hover:underline">Login as Lecturer</a>
         </p>
     </div>

@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\QuizController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\RegisterController;
 
 Route::get('/', function () {
     return redirect('/login');
@@ -18,6 +19,9 @@ Route::get('/', function () {
 Route::get('/login', [AuthController::class, 'index'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.process');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::get('/register', [RegisterController::class, 'index'])->name('register');
+Route::post('/register', [RegisterController::class, 'register'])->name('register.process');
 
 Route::get('/lecturer/login', [LecturerAuthController::class, 'showLoginForm'])->name('lecturer.login');
 Route::post('/lecturer/login', [LecturerAuthController::class, 'login'])->name('lecturer.login.process');

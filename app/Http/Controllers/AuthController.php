@@ -10,17 +10,11 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    /**
-     * Menampilkan halaman login
-     */
     public function index()
     {
-        return view("login/index");
+        return view("login.index");
     }
 
-    /**
-     * Proses login student
-     */
     public function login(Request $request)
     {
         $request->validate([
@@ -32,7 +26,7 @@ class AuthController extends Controller
             'password.required' => 'Password tidak boleh kosong.',
         ]);
 
-        $email = strtolower(trim($request->email)); // Normalize email
+        $email = strtolower(trim($request->email));
         \Log::info("Attempting student login with email: {$email}");
 
         if (Auth::guard('student')->attempt(['email' => $email, 'password' => $request->password])) {
@@ -47,9 +41,6 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Logout student
-     */
     public function logout(Request $request)
     {
         Auth::guard('student')->logout();

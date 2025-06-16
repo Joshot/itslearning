@@ -28,6 +28,20 @@ class CourseResource extends Resource
                 Forms\Components\TextInput::make('course_name')
                     ->required()
                     ->maxLength(255),
+                Forms\Components\Select::make('course_milik')
+                    ->options([
+                        'Informatika' => 'Informatika',
+                        'Pertanian' => 'Pertanian',
+                        'Sistem Informasi' => 'Sistem Informasi',
+                        'Teknik Komputer' => 'Teknik Komputer',
+                        'Biologi' => 'Biologi',
+                        'Kedokteran' => 'Kedokteran',
+                        'Ilmu Komunikasi' => 'Ilmu Komunikasi',
+                        'Manajemen' => 'Manajemen',
+                        'Film' => 'Film',
+                        'DKV' => 'DKV',
+                    ])
+                    ->required(),
                 Forms\Components\Section::make('Course Materials')
                     ->schema([
                         Forms\Components\Repeater::make('materials')
@@ -79,6 +93,9 @@ class CourseResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('course_name')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('course_milik')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('materials_count')

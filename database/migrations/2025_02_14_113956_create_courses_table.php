@@ -11,6 +11,18 @@ return new class extends Migration {
             $table->id();
             $table->string('course_code')->unique();
             $table->string('course_name');
+            $table->enum('course_milik', [
+                'Informatika',
+                'Pertanian',
+                'Sistem Informasi',
+                'Teknik Komputer',
+                'Biologi',
+                'Kedokteran',
+                'Ilmu Komunikasi',
+                'Manajemen',
+                'Film',
+                'DKV'
+            ]);
             $table->timestamps();
         });
     }

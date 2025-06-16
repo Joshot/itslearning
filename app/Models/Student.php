@@ -14,4 +14,6 @@ class Student extends Authenticatable
     ];
 
     protected $hidden = ['password'];
+
+    protected $guard = 'student';
 }
