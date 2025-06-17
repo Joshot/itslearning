@@ -428,7 +428,7 @@ class QuizController extends Controller
 
             // Penyesuaian distribusi
             $total = array_sum($questions_per_difficulty);
-            $max_attempts = 5;
+            $max_attempts = ceil(log($num_failed_tasks * count($difficulties), 2));
             $attempt = 0;
             while ($total != $num_questions || $questions_per_difficulty['easy'] <= $questions_per_difficulty['medium'] || $questions_per_difficulty['medium'] < $questions_per_difficulty['hard']) {
                 if ($attempt++ >= $max_attempts) {
