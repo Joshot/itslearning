@@ -51,10 +51,9 @@ Route::middleware(['auth:lecturer'])->group(function () {
     Route::get('/lecturer/course/{courseCode}/student-tasks/{task_number}', [LecturerCourseController::class, 'getTaskDetails'])->name('lecturer.course.student-tasks.details');
     Route::get('/profile/lecturer', [ProfileController::class, 'edit'])->name('profile.edit.lecturer');
     Route::patch('/profile/lecturer', [ProfileController::class, 'update'])->name('profile.update.lecturer');
+    Route::post('/questions/store', [QuestionController::class, 'store'])->name('questions.store');
+    Route::post('/questions/import', [QuestionController::class, 'import'])->name('questions.import');
 });
-
-Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');
-Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
 
 Route::get('/admin/course-assignments/{course_code}', CourseAssignments::class)
     ->name('filament.admin.pages.course-assignments')

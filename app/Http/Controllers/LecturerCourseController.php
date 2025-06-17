@@ -47,7 +47,6 @@ class LecturerCourseController extends Controller
             ];
         }
 
-        // Define task number to week mapping
         $taskToWeek = [
             1 => 4,
             2 => 7,
@@ -58,14 +57,12 @@ class LecturerCourseController extends Controller
         $quizzes = Quiz::where('course_code', $formattedCourseCode)->get()->mapWithKeys(function ($quiz) use ($course, $taskToWeek) {
             $taskNumber = $quiz->task_number;
 
-            // Check if task number is valid
             if (!isset($taskToWeek[$taskNumber])) {
                 return [];
             }
 
             $week = $taskToWeek[$taskNumber];
 
-            // Fetch 10 questions: 4 easy, 3 medium, 3 hard
             $easyQuestions = Question::where('course_id', $course->id)
                 ->where('task_number', $taskNumber)
                 ->where('difficulty', 'easy')
@@ -98,7 +95,7 @@ class LecturerCourseController extends Controller
                 'medium_questions' => $mediumQuestions->count(),
                 'hard_questions' => $hardQuestions->count(),
             ]];
-        })->filter(); // Remove empty entries
+        })->filter();
 
         $assignments = CourseAssignment::where('course_code', $formattedCourseCode)
             ->with(['lecturer', 'student'])
@@ -121,6 +118,41 @@ class LecturerCourseController extends Controller
             'totalParticipants'
         ));
     }
+
+    public function showBankSoal($courseCode)
+    {
+        $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
+        $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+        $courseCodeWithoutDash = str_replace('-', '', $formattedCourseCode);
+        $questions = Question::where('course_id', $course->id)->get();
+
+        // Initialize question counts
+        $questionCounts = [
+            'total' => $questions->count(),
+            1 => ['easy' => 0, 'medium' => 0, 'hard' => 0, 'total' => 0],
+            2 => ['easy' => 0, 'medium' => 0, 'hard' => 0, 'total' => 0],
+            3 => ['easy' => 0, 'medium' => 0, 'hard' => 0, 'total' => 0],
+            4 => ['easy' => 0, 'medium' => 0, 'hard' => 0, 'total' => 0],
+        ];
+
+        // Calculate counts per task
+        foreach ($questions as $question) {
+            if ($question->task_number && in_array($question->task_number, [1, 2, 3, 4])) {
+                $task = $question->task_number;
+                $difficulty = $question->difficulty;
+                if (in_array($difficulty, ['easy', 'medium', 'hard'])) {
+                    $questionCounts[$task][$difficulty]++;
+                    $questionCounts[$task]['total']++;
+                }
+            }
+        }
+
+        // Log for debugging
+        Log::info('questionCounts', ['counts' => $questionCounts]);
+
+        return view('lecture.banksoal', compact('course', 'questions', 'courseCodeWithoutDash', 'questionCounts'));
+    }
+
 
     public function storeMaterial(Request $request, $courseCode)
     {
@@ -356,15 +388,6 @@ class LecturerCourseController extends Controller
         }
     }
 
-    public function showBankSoal($courseCode)
-    {
-        $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
-        $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
-        $courseCodeWithoutDash = str_replace('-', '', $formattedCourseCode);
-        $questions = Question::where('course_id', $course->id)->get();
-
-        return view('lecture.banksoal', compact('course', 'questions', 'courseCodeWithoutDash'));
-    }
 
     public function getStudentTasks($courseCode)
     {
