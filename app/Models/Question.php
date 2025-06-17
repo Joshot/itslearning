@@ -18,7 +18,8 @@ class Question extends Model
         'correct_option',
         'task_number',
         'course_id',
-        'difficulty'
+        'difficulty',
+        'image', // Add image to fillable
     ];
 
     public function course()

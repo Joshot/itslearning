@@ -22,19 +22,12 @@ class QuestionResource extends Resource
             ->schema([
                 Forms\Components\Select::make('task_number')
                     ->label('Nomor Tugas')
-                    ->options(
-                        \App\Models\Question::with('course')
-                            ->distinct()
-                            ->pluck('task_number')
-                            ->mapWithKeys(function ($taskNumber) {
-                                $question = \App\Models\Question::where('task_number', $taskNumber)
-                                    ->with('course')
-                                    ->first();
-                                return [
-                                    $taskNumber => 'Tugas ' . $taskNumber . ' (' . ($question->course?->course_name ?? 'Tanpa Course') . ')'
-                                ];
-                            })
-                    )
+                    ->options([
+                        1 => '1',
+                        2 => '2',
+                        3 => '3',
+                        4 => '4',
+                    ])
                     ->searchable()
                     ->required()
                     ->reactive(),
@@ -77,6 +70,13 @@ class QuestionResource extends Resource
                         'hard' => 'Hard',
                     ])
                     ->required(),
+                Forms\Components\FileUpload::make('image')
+                    ->label('Image')
+                    ->image()
+                    ->directory('questions')
+                    ->disk('public')
+                    ->maxSize(2048) // 2MB max
+                    ->nullable(),
             ]);
     }
 
@@ -106,6 +106,11 @@ class QuestionResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('correct_option')
                     ->sortable(),
+                Tables\Columns\ImageColumn::make('image')
+                    ->label('Image')
+                    ->disk('public')
+                    ->sortable()
+                    ->getStateUsing(fn ($record) => $record->image ? $record->image : null),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),
@@ -119,9 +124,12 @@ class QuestionResource extends Resource
                     ]),
                 Tables\Filters\SelectFilter::make('task_number')
                     ->label('Nomor Tugas')
-                    ->options(
-                        \App\Models\Question::distinct()->pluck('task_number', 'task_number')
-                    ),
+                    ->options([
+                        1 => '1',
+                        2 => '2',
+                        3 => '3',
+                        4 => '4',
+                    ]),
                 Tables\Filters\SelectFilter::make('course_id')
                     ->label('Kursus')
                     ->options(

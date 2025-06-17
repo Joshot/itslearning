@@ -17,6 +17,7 @@ return new class extends Migration {
             $table->unsignedTinyInteger('task_number')->nullable(); // 1, 2, 3, or 4
             $table->unsignedBigInteger('course_id'); // Foreign key to courses
             $table->enum('difficulty', ['easy', 'medium', 'hard']);
+            $table->string('image')->nullable(); // Add nullable image column
             $table->timestamps();
 
             $table->foreign('course_id')->references('id')->on('courses')->onDelete('cascade');

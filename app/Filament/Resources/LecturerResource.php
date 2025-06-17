@@ -9,6 +9,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
 
 class LecturerResource extends Resource
 {
@@ -35,17 +37,39 @@ class LecturerResource extends Resource
                     ->password()
                     ->required()
                     ->minLength(6)
-                    ->visibleOn('create'),
-                Forms\Components\TextInput::make('major')
+                    ->visibleOn('create')
+                    ->dehydrateStateUsing(function ($state) {
+                        Log::info("Hashing password for lecturer creation", ['password_length' => strlen($state)]);
+                        return Hash::make($state);
+                    }),
+                Forms\Components\Select::make('major')
                     ->required()
-                    ->maxLength(255),
+                    ->options([
+                        'Informatika' => 'Informatika',
+                        'Pertanian' => 'Pertanian',
+                        'Sistem Informasi' => 'Sistem Informasi',
+                        'Teknik Komputer' => 'Teknik Komputer',
+                        'Biologi' => 'Biologi',
+                        'Kedokteran' => 'Kedokteran',
+                        'Ilmu Komunikasi' => 'Ilmu Komunikasi',
+                        'Manajemen' => 'Manajemen',
+                        'Film' => 'Film',
+                        'DKV' => 'DKV',
+                    ]),
                 Forms\Components\TextInput::make('mata_kuliah')
                     ->required()
                     ->maxLength(255),
                 Forms\Components\FileUpload::make('profile_photo')
                     ->image()
                     ->directory('profile-photos')
-                    ->default('/images/profile.jpg'),
+                    ->nullable()
+                    ->dehydrateStateUsing(function ($state) {
+                        Log::info("Processing profile_photo state", ['state' => $state]);
+                        if (is_array($state)) {
+                            return !empty($state) ? $state[0] : '/images/profile.jpg';
+                        }
+                        return $state ?? '/images/profile.jpg';
+                    }),
                 Forms\Components\TextInput::make('motto')
                     ->maxLength(255)
                     ->default('Veni, Vidi, Vici'),
