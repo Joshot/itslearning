@@ -39,9 +39,7 @@ Route::middleware(['auth:student'])->group(function () {
 });
 
 Route::middleware(['auth:lecturer'])->group(function () {
-    Route::get('/lecturer/dashboard', function () {
-        return view('lecture.dashboard');
-    })->name('lecturer.dashboard');
+    Route::get('/lecturer/dashboard', [DashboardController::class, 'index'])->name('lecturer.dashboard');
     Route::get('/lecturer/course/{courseCode}', [LecturerCourseController::class, 'show'])->name('lecturer.course.show');
     Route::post('/lecturer/course/{courseCode}/material', [LecturerCourseController::class, 'storeMaterial'])->name('lecturer.course.material.store');
     Route::delete('/lecturer/course/{courseCode}/material/{week}/{index}', [LecturerCourseController::class, 'deleteMaterial'])->name('lecturer.course.material.delete');

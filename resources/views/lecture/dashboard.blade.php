@@ -18,7 +18,6 @@
         border-bottom: 2px solid #106587;
         color: #106587;
     }
-
     .dashboard-container {
         display: flex;
         gap: 2rem;
@@ -81,7 +80,6 @@
     #dropdownToggle:hover {
         background: #e2e8f0;
     }
-
     /* Responsive Styles */
     @media (max-width: 1400px) {
         #cardView {
@@ -94,7 +92,6 @@
             flex: 1;
         }
     }
-
     @media (max-width: 1100px) {
         .dashboard-container {
             flex-direction: column;
@@ -174,13 +171,13 @@
             font-size: 0.95rem;
         }
     }
-
     @media (max-width: 768px) {
         .dashboard-container {
             padding: 0.5rem;
             width: 100vw;
             max-width: 100%;
             margin: 0;
+            overflow-x: hidden;
         }
         #cardView {
             grid-template-columns: 1fr;
@@ -246,7 +243,6 @@
             height: 2rem;
         }
     }
-
     @media (max-width: 480px) {
         .dashboard-container {
             max-width: 100%;
@@ -291,8 +287,6 @@
             font-size: 0.75rem;
         }
     }
-
-    /* Ensure no horizontal overflow */
     html, body {
         margin: 0;
         padding: 0;
@@ -303,7 +297,7 @@
 
 <div class="flex justify-center items-center min-h-[80vh]">
     <div class="flex w-full max-w-[100%] dashboard-container">
-        <!-- Sidebar (2 bagian) -->
+        <!-- Sidebar -->
         <div class="flex-[2] bg-white shadow-lg rounded-2xl p-8 h-[600px] overflow-y-auto flex flex-col profile-card sidebar">
             <h2 class="text-2xl font-semibold">Profile</h2>
 
@@ -319,14 +313,14 @@
                 Name: <strong>{{ Auth::guard('lecturer')->user()->name ?? 'Guest' }}
                     ({{ Auth::guard('lecturer')->user()->nidn ?? 'Guest' }})</strong>
             </p>
-            <p class="mt-4 text-center">Major: <strong>{{ Auth::guard('lecturer')->user()->major ?? 'null' }}</strong></p>
-            <p class="mt-2 text-center">Email Lecturer: <strong>{{ Auth::guard('lecturer')->user()->email ?? 'Guest' }}</strong></p>
-            <p class="mt-2 text-center">Course: <strong>{{ Auth::guard('lecturer')->user()->mata_kuliah ?? 'Guest' }}</strong></p>
-            <p class="mt-2 text-center">Motto: <strong>{{ Auth::guard('lecturer')->user()->motto ?? 'Guest' }}</strong></p>
+            <p class="mt-4 text-center">Major: <strong>{{ Auth::guard('lecturer')->user()->major ?? 'N/A' }}</strong></p>
+            <p class="mt-2 text-center">Email: <strong>{{ Auth::guard('lecturer')->user()->email ?? 'Guest' }}</strong></p>
+            <p class="mt-2 text-center">Course: <strong>{{ Auth::guard('lecturer')->user()->mata_kuliah ?? 'N/A' }}</strong></p>
+            <p class="mt-2 text-center">Motto: <strong>{{ Auth::guard('lecturer')->user()->motto ?? 'N/A' }}</strong></p>
             <a href="{{ route('profile.edit.lecturer') }}" class="mt-8 text-white py-2 px-4 rounded-xl text-center edit-profile-btn">Edit Profile</a>
         </div>
 
-        <!-- Konten Utama (8 bagian) -->
+        <!-- Main Content -->
         <div class="flex-[8] bg-white shadow-lg rounded-2xl p-8 h-[600px] overflow-y-auto flex flex-col main-content">
             <div class="flex border-b">
                 <button id="tab-course" class="tab-button active">Course List</button>
@@ -334,17 +328,6 @@
             </div>
 
             <div id="content-course" class="tab-content block flex flex-col items-center">
-                @php
-                use App\Models\Course;
-                $courses = Course::all()->map(function ($course) {
-                return [
-                'code' => $course->course_code,
-                'name' => $course->course_name,
-                ];
-                })->toArray();
-                $imageCount = 6;
-                @endphp
-
                 <!-- Dropdown Toggle -->
                 <div class="w-full flex justify-end mb-2 mt-4">
                     <div class="relative">
@@ -361,37 +344,32 @@
                     </div>
                 </div>
 
-                <!-- Tampilan Card -->
+                <!-- Card View -->
                 <div id="cardView" class="grid grid-cols-3 md:grid-cols-2 sm:grid-cols-2 gap-6 max-w-5xl w-full">
                     @foreach ($courses as $index => $course)
                     @php
-                    $imageNumber = ($index % $imageCount) + 1;
+                    $imageNumber = ($index % 6) + 1;
                     $imagePath = asset("/images/0$imageNumber.png");
-                    $courseId = strtolower(str_replace('-', '', $course['code']));
                     @endphp
-
-                    <a href="{{ url('/lecturer/course/' . $courseId) }}" class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex flex-col items-center course-card" data-no-prevent>
+                    <a href="{{ url('/lecturer/course/' . $course->course_id) }}" class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex flex-col items-center course-card" data-no-prevent>
                         <img src="{{ $imagePath }}" alt="Course Image" class="w-full h-32 object-cover rounded-lg">
                         <div class="w-full text-center mt-3">
-                            <h3 class="text-base font-semibold text-gray-800">{{ $course['name'] }}</h3>
-                            <p class="text-xs text-gray-500 mt-1">Course Code: {{ $course['code'] }}</p>
+                            <h3 class="text-base font-semibold text-gray-800">{{ $course->course_name }}</h3>
+                            <p class="text-xs text-gray-500 mt-1">Course Code: {{ $course->course_code }}</p>
                         </div>
                     </a>
                     @endforeach
                 </div>
 
-                <!-- Tampilan List -->
+                <!-- List View -->
                 <div id="listView" class="hidden max-w-5xl w-full">
                     <ul class="bg-white rounded-lg shadow-md divide-y">
                         @foreach ($courses as $course)
-                        @php
-                        $courseId = strtolower(str_replace('-', '', $course['code']));
-                        @endphp
                         <li class="p-4 flex justify-between items-center hover:bg-gray-100 cursor-pointer transition rounded-md">
-                            <a href="{{ url('/lecturer/course/' . $courseId) }}" class="w-full text-left flex justify-between items-center" data-no-prevent>
+                            <a href="{{ url('/lecturer/course/' . $course->course_id) }}" class="w-full text-left flex justify-between items-center" data-no-prevent>
                                 <div>
-                                    <h3 class="text-sm font-semibold text-gray-800">{{ $course['name'] }}</h3>
-                                    <p class="text-xs text-gray-500">Course Code: {{ $course['code'] }}</p>
+                                    <h3 class="text-sm font-semibold text-gray-800">{{ $course->course_name }}</h3>
+                                    <p class="text-xs text-gray-500">Course Code: {{ $course->course_code }}</p>
                                 </div>
                             </a>
                         </li>
@@ -425,12 +403,11 @@
             dropdownMenu.classList.toggle("hidden");
         });
 
-        // Event listener untuk memilih tampilan
+        // Select view
         document.querySelectorAll(".select-view").forEach(button => {
             button.addEventListener("click", (event) => {
                 const selectedView = event.target.dataset.view;
                 dropdownText.textContent = selectedView.charAt(0).toUpperCase() + selectedView.slice(1);
-
                 if (selectedView === "card") {
                     cardView.classList.remove("hidden");
                     listView.classList.add("hidden");
@@ -438,23 +415,22 @@
                     cardView.classList.add("hidden");
                     listView.classList.remove("hidden");
                 }
-
                 dropdownMenu.classList.add("hidden");
             });
         });
 
-        // Close dropdown jika klik di luar
+        // Close dropdown on outside click
         document.addEventListener("click", (event) => {
             if (!dropdownToggle.contains(event.target) && !dropdownMenu.contains(event.target)) {
                 dropdownMenu.classList.add("hidden");
             }
         });
 
+        // Tab switching
         tabs.forEach((tab, index) => {
             tab.addEventListener("click", () => {
                 tabs.forEach(t => t.classList.remove("active"));
                 contents.forEach(c => c.classList.add("hidden"));
-
                 tab.classList.add("active");
                 contents[index].classList.remove("hidden");
             });
