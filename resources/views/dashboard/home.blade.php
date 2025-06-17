@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Home Page')
+@section('title', 'Dashboard')
 
 @section('content')
 
@@ -18,7 +18,6 @@
         border-bottom: 2px solid #106587;
         color: #106587;
     }
-
     .dashboard-container {
         display: flex;
         gap: 2rem;
@@ -81,8 +80,6 @@
     #dropdownToggle:hover {
         background: #e2e8f0;
     }
-
-    /* Responsive Styles */
     @media (max-width: 1400px) {
         #cardView {
             grid-template-columns: repeat(2, 1fr);
@@ -94,7 +91,6 @@
             flex: 1;
         }
     }
-
     @media (max-width: 1100px) {
         .dashboard-container {
             flex-direction: column;
@@ -174,7 +170,6 @@
             font-size: 0.95rem;
         }
     }
-
     @media (max-width: 768px) {
         .dashboard-container {
             padding: 0.5rem;
@@ -231,7 +226,7 @@
             width: 5.5rem;
         }
         #dropdownMenu button {
-            FONT-SIZE: 0.8REM;
+            font-size: 0.8rem;
             padding: 0.4rem;
         }
         .tab-button {
@@ -246,7 +241,6 @@
             height: 2rem;
         }
     }
-
     @media (max-width: 480px) {
         .dashboard-container {
             max-width: 100%;
@@ -291,8 +285,6 @@
             font-size: 0.75rem;
         }
     }
-
-    /* Ensure no horizontal overflow */
     html, body {
         margin: 0;
         padding: 0;
@@ -303,48 +295,32 @@
 
 <div class="flex justify-center items-center min-h-[80vh]">
     <div class="flex w-full max-w-[100%] dashboard-container">
-        <!-- Sidebar (2 bagian) -->
+        <!-- Sidebar -->
         <div class="flex-[2] bg-white shadow-lg rounded-2xl p-8 h-[600px] overflow-y-auto flex flex-col profile-card sidebar">
             <h2 class="text-2xl font-semibold">Profile</h2>
-
             @php
             $photoPath = Auth::guard('student')->user()->profile_photo ?? '/images/profile.jpg';
             $isDefault = $photoPath === '/images/profile.jpg';
             @endphp
-
             <img src="{{ $isDefault ? asset($photoPath) : asset('storage/' . $photoPath) }}"
                  alt="Profile Picture" class="w-32 h-32 rounded-full mx-auto mt-4">
-
             <p class="mt-4 text-center">
                 Name: <strong>{{ Auth::guard('student')->user()->name ?? 'Guest' }}
                     ({{ Auth::guard('student')->user()->nim ?? 'Guest' }})</strong>
             </p>
             <p class="mt-4 text-center">Major: <strong>{{ Auth::guard('student')->user()->major ?? 'Not Set' }}</strong></p>
             <p class="mt-2 text-center">Email: <strong>{{ Auth::guard('student')->user()->email ?? 'Guest' }}</strong></p>
-            <p class="mt-2 text-center">Course: <strong>{{ Auth::guard('student')->user()->mata_kuliah ?? 'Not Set' }}</strong></p>
             <p class="mt-2 text-center">Motto: <strong>{{ Auth::guard('student')->user()->motto ?? 'Not Set' }}</strong></p>
             <a href="{{ route('profile.edit') }}" class="mt-8 text-white py-2 px-4 rounded-xl text-center edit-profile-btn">Edit Profile</a>
         </div>
 
-        <!-- Konten Utama (8 bagian) -->
+        <!-- Main Content -->
         <div class="flex-[8] bg-white shadow-lg rounded-2xl p-8 h-[600px] overflow-y-auto flex flex-col main-content">
             <div class="flex border-b">
                 <button id="tab-course" class="tab-button active">Course List</button>
                 <button id="tab-timeline" class="tab-button">Timeline</button>
             </div>
-
             <div id="content-course" class="tab-content block flex flex-col items-center">
-                @php
-                use App\Models\Course;
-                $courses = Course::all()->map(function ($course) {
-                return [
-                'code' => $course->course_code,
-                'name' => $course->course_name,
-                ];
-                })->toArray();
-                $imageCount = 6;
-                @endphp
-
                 <!-- Dropdown Toggle -->
                 <div class="w-full flex justify-end mb-2 mt-4">
                     <div class="relative">
@@ -360,46 +336,47 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Tampilan Card -->
+                <!-- Card View -->
                 <div id="cardView" class="grid grid-cols-3 md:grid-cols-2 sm:grid-cols-2 gap-6 max-w-5xl w-full">
+                    @if ($courses->isEmpty())
+                    <p class="text-gray-600 col-span-full text-center">Belum ada mata kuliah yang ditugaskan untuk Anda.</p>
+                    @else
                     @foreach ($courses as $index => $course)
                     @php
+                    $imageCount = 6;
                     $imageNumber = ($index % $imageCount) + 1;
                     $imagePath = asset("/images/0$imageNumber.png");
-                    $courseId = strtolower(str_replace('-', '', $course['code']));
                     @endphp
-
-                    <a href="{{ url('/course/' . $courseId) }}" class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex flex-col items-center course-card" data-no-prevent>
+                    <a href="{{ route('course.show', $course->course_id) }}" class="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition duration-300 flex flex-col items-center course-card" data-no-prevent>
                         <img src="{{ $imagePath }}" alt="Course Image" class="w-full h-32 object-cover rounded-lg">
                         <div class="w-full text-center mt-3">
-                            <h3 class="text-base font-semibold text-gray-800">{{ $course['name'] }}</h3>
-                            <p class="text-xs text-gray-500 mt-1">Course Code: {{ $course['code'] }}</p>
+                            <h3 class="text-base font-semibold text-gray-800">{{ $course->course_name }}</h3>
+                            <p class="text-xs text-gray-500 mt-1">Course Code: {{ $course->course_code }}</p>
                         </div>
                     </a>
                     @endforeach
+                    @endif
                 </div>
-
-                <!-- Tampilan List -->
+                <!-- List View -->
                 <div id="listView" class="hidden max-w-5xl w-full">
                     <ul class="bg-white rounded-lg shadow-md divide-y">
+                        @if ($courses->isEmpty())
+                        <li class="p-4 text-gray-600 text-center">Belum ada mata kuliah yang ditugaskan untuk Anda.</li>
+                        @else
                         @foreach ($courses as $course)
-                        @php
-                        $courseId = strtolower(str_replace('-', '', $course['code']));
-                        @endphp
                         <li class="p-4 flex justify-between items-center hover:bg-gray-100 cursor-pointer transition rounded-md">
-                            <a href="{{ url('/course/' . $courseId) }}" class="w-full text-left flex justify-between items-center" data-no-prevent>
+                            <a href="{{ route('course.show', $course->course_id) }}" class="w-full text-left flex justify-between items-center" data-no-prevent>
                                 <div>
-                                    <h3 class="text-sm font-semibold text-gray-800">{{ $course['name'] }}</h3>
-                                    <p class="text-xs text-gray-500">Course Code: {{ $course['code'] }}</p>
+                                    <h3 class="text-sm font-semibold text-gray-800">{{ $course->course_name }}</h3>
+                                    <p class="text-xs text-gray-500">Course Code: {{ $course->course_code }}</p>
                                 </div>
                             </a>
                         </li>
                         @endforeach
+                        @endif
                     </ul>
                 </div>
             </div>
-
             <div id="content-timeline" class="tab-content hidden flex flex-col items-center justify-center h-full">
                 <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
@@ -425,12 +402,11 @@
             dropdownMenu.classList.toggle("hidden");
         });
 
-        // Event listener untuk memilih tampilan
+        // Handle view selection
         document.querySelectorAll(".select-view").forEach(button => {
             button.addEventListener("click", (event) => {
                 const selectedView = event.target.dataset.view;
                 dropdownText.textContent = selectedView.charAt(0).toUpperCase() + selectedView.slice(1);
-
                 if (selectedView === "card") {
                     cardView.classList.remove("hidden");
                     listView.classList.add("hidden");
@@ -438,23 +414,22 @@
                     cardView.classList.add("hidden");
                     listView.classList.remove("hidden");
                 }
-
                 dropdownMenu.classList.add("hidden");
             });
         });
 
-        // Close dropdown jika klik di luar
+        // Close dropdown on outside click
         document.addEventListener("click", (event) => {
             if (!dropdownToggle.contains(event.target) && !dropdownMenu.contains(event.target)) {
                 dropdownMenu.classList.add("hidden");
             }
         });
 
+        // Handle tab switching
         tabs.forEach((tab, index) => {
             tab.addEventListener("click", () => {
                 tabs.forEach(t => t.classList.remove("active"));
                 contents.forEach(c => c.classList.add("hidden"));
-
                 tab.classList.add("active");
                 contents[index].classList.remove("hidden");
             });
