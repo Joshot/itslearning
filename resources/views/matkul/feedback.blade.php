@@ -315,7 +315,7 @@
             </div>
         </div>
         <div class="feedback-container">
-            <h1 class="text-2xl font-semibold mb-6 text-gray-800">Feedback Kursus {{ $course->course_name }}</h1>
+            <h1 class="text-2xl font-semibold mb-6 text-gray-800">Feedback Matkul {{ $course->course_name }}</h1>
             <div class="card-row">
                 <div class="main-feedback-card">
                     <h3 class="text-lg font-semibold text-gray-800 mb-2">Feedback</h3>

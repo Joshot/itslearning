@@ -99,7 +99,8 @@ class QuizController extends Controller
 
             if ($existingAttempt) {
                 Log::warning("Quiz already attempted on submit", ['studentId' => $studentId, 'quizId' => $quizId]);
-                return redirect()->back()->with('error', 'Anda telah mengerjakan kuis ini.');
+                return redirect()->route('kuis.review', ['courseCode' => $courseCode, 'quizId' => $quizId])
+                    ->with('error', 'Anda telah mengerjakan kuis ini.');
             }
 
             $answers = $request->input('answers', []);
@@ -257,38 +258,21 @@ class QuizController extends Controller
                             'itsReport' => $itsReport
                         ]);
 
-                        return view('matkul.kuis', [
-                            'quiz' => $quiz,
-                            'questions' => $questions,
-                            'courseCode' => $courseCode,
-                            'quizId' => $quizId,
-                            'course' => $course,
-                            'amount' => $attempt,
-                            'attempt' => $attempt,
-                            'studentAnswers' => StudentAnswer::where('attempt_id', $attempt->id)->get()->keyBy('question_id'),
-                            'score' => $score,
-                        ])->with([
-                            'quiz_completed' => ['quiz_number' => $quiz->task_number, 'score' => $score],
-                            'feedback_popup' => [
-                                'title' => 'Feedback Tugas',
-                                'text' => $itsReport,
-                                'redirect' => route('feedback.show', ['courseCode' => strtolower(str_replace('-', '', $course->course_code))])
-                            ]
-                        ]);
+                        return redirect()->route('kuis.review', ['courseCode' => $courseCode, 'quizId' => $quizId])
+                            ->with([
+                                'quiz_completed' => ['quiz_number' => $quiz->task_number, 'score' => $score],
+                                'feedback_popup' => [
+                                    'title' => 'Feedback Tugas',
+                                    'text' => $itsReport,
+                                    'redirect' => route('feedback.show', ['courseCode' => strtolower(str_replace('-', '', $course->course_code))])
+                                ]
+                            ]);
                     }
                 }
             }
 
-            return view('matkul.kuis', [
-                'quiz' => $quiz,
-                'questions' => $questions,
-                'courseCode' => $courseCode,
-                'quizId' => $quizId,
-                'course' => $course,
-                'attempt' => $attempt,
-                'studentAnswers' => StudentAnswer::where('attempt_id', $attempt->id)->get()->keyBy('question_id'),
-                'score' => $score,
-            ])->with('quiz_completed', ['quiz_number' => $quiz->task_number, 'score' => $score]);
+            return redirect()->route('kuis.review', ['courseCode' => $courseCode, 'quizId' => $quizId])
+                ->with('quiz_completed', ['quiz_number' => $quiz->task_number, 'score' => $score]);
         } catch (QueryException $e) {
             Log::error("Database error in submitQuiz", [
                 'error' => $e->getMessage(),
@@ -296,6 +280,64 @@ class QuizController extends Controller
                 'quizId' => $quizId
             ]);
             return redirect()->back()->with('error', 'Gagal menyimpan jawaban kuis. Hubungi admin.');
+        }
+    }
+
+    public function reviewQuiz($courseCode, $quizId)
+    {
+        $studentId = Auth::guard('student')->id();
+        $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
+
+        try {
+            $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+            $quiz = Quiz::where('id', $quizId)->where('course_code', $formattedCourseCode)->firstOrFail();
+
+            $attempt = StudentAttempt::where('student_id', $studentId)
+                ->where('quiz_id', $quizId)
+                ->where('course_id', $course->id)
+                ->where('task_number', $quiz->task_number)
+                ->first();
+
+            if (!$attempt) {
+                Log::error("No attempt found for review", ['studentId' => $studentId, 'quizId' => $quizId]);
+                return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
+                    ->with('error', 'Tidak ada data kuis yang ditemukan.');
+            }
+
+            // Fetch StudentAnswer records sorted by id
+            $studentAnswers = StudentAnswer::where('attempt_id', $attempt->id)
+                ->orderBy('id', 'asc')
+                ->get()
+                ->keyBy('question_id');
+
+            // Get question IDs in the order of StudentAnswer
+            $questionIds = $studentAnswers->pluck('question_id')->toArray();
+
+            // Fetch Questions in the same order as question IDs
+            $questions = Question::whereIn('id', $questionIds)
+                ->where('course_id', $course->id)
+                ->where('task_number', $quiz->task_number)
+                ->orderByRaw('FIELD(id, ' . implode(',', $questionIds) . ')')
+                ->get();
+
+            return view('lecture.reviewtugas', [
+                'quiz' => $quiz,
+                'questions' => $questions,
+                'courseCode' => $courseCode,
+                'quizId' => $quizId,
+                'course' => $course,
+                'attempt' => $attempt,
+                'studentAnswers' => $studentAnswers,
+                'score' => $attempt->score,
+            ]);
+        } catch (QueryException $e) {
+            Log::error("Database error in reviewQuiz", [
+                'error' => $e->getMessage(),
+                'studentId' => $studentId,
+                'quizId' => $quizId
+            ]);
+            return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
+                ->with('error', 'Gagal mengakses data review. Hubungi admin.');
         }
     }
 

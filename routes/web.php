@@ -33,6 +33,7 @@ Route::middleware(['auth:student'])->group(function () {
     Route::get('/course/{courseCode}', [CourseController::class, 'show'])->name('course.show');
     Route::get('/quiz/{courseCode}/{quizId}', [QuizController::class, 'startQuiz'])->name('kuis.start');
     Route::post('/quiz/{courseCode}/{quizId}', [QuizController::class, 'submitQuiz'])->name('kuis.submit');
+    Route::get('/quiz/{courseCode}/{quizId}/review', [QuizController::class, 'reviewQuiz'])->name('kuis.review'); // New route
     Route::get('/feedback/{courseCode}', [FeedbackController::class, 'show'])->name('feedback.show');
     Route::get('/profile/student', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile/student', [ProfileController::class, 'update'])->name('profile.update');

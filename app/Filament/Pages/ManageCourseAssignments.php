@@ -22,7 +22,7 @@ class ManageCourseAssignments extends Page implements HasTable
     use InteractsWithTable;
 
     protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
-    protected static ?string $navigationLabel = 'Kelola Assessment';
+    protected static ?string $navigationLabel = 'Kelola Mata Kuliah';
     protected static string $view = 'filament.pages.manage-course-assignments';
 
     public function table(Table $table): Table

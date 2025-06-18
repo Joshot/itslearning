@@ -471,7 +471,7 @@ use Illuminate\Support\Facades\Session;
         </div>
 
         <div class="main-content">
-            <h1 class="text-xl font-semibold mb-4 text-gray-800">Materi Kursus</h1>
+            <h1 class="text-xl font-semibold mb-4 text-gray-800">Materi Matkul</h1>
             <div class="space-y-4">
                 @foreach ($materials as $week => $material)
                 @php

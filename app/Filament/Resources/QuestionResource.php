@@ -131,7 +131,7 @@ class QuestionResource extends Resource
                         4 => '4',
                     ]),
                 Tables\Filters\SelectFilter::make('course_id')
-                    ->label('Kursus')
+                    ->label('Courses')
                     ->options(
                         \App\Models\Course::pluck('course_name', 'id')
                     ),

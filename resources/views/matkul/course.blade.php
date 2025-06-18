@@ -170,11 +170,28 @@
                 @for ($i = 1; $i <= 4; $i++)
                 <div class="quiz-card">
                     <p class="font-semibold">Tugas {{ $i }}</p>
-                    <p class="text-gray-600">
+                    <p class="text-gray-600 flex items-center justify-between">
                         @if (isset($quizScores[$i]))
-                        <strong>{{ $quizScores[$i] }}/100</strong>
+                        @php
+                        $gradeScale = [
+                        85 => 'A', 80 => 'A-', 75 => 'B+', 70 => 'B', 65 => 'B-',
+                        60 => 'C+', 55 => 'C', 45 => 'D', 0 => 'E'
+                        ];
+                        $grade = 'E'; // Default grade
+                        foreach ($gradeScale as $threshold => $letter) {
+                        if ($quizScores[$i] >= $threshold) {
+                        $grade = $letter;
+                        break;
+                        }
+                        }
+                        @endphp
+                        <span>
+                        <strong>{{ $quizScores[$i] }}/100</strong> ({{ $grade }})
+                    </span>
+                        <a href="{{ route('kuis.review', ['courseCode' => $courseCodeWithoutDash, 'quizId' => $i]) }}"
+                           class="btn btn-primary text-sm">Review</a>
                         @else
-                        Belum Dikerjakan
+                        <span>Belum Dikerjakan</span>
                         @endif
                     </p>
                 </div>
@@ -192,7 +209,7 @@
         </div>
 
         <div class="main-content">
-            <h1 class="text-2xl font-semibold mb-6 text-gray-800">Materi Kursus</h1>
+            <h1 class="text-2xl font-semibold mb-6 text-gray-800">Materi Matkul</h1>
             <div class="space-y-6">
                 @foreach ($materials as $week => $material)
                 @php

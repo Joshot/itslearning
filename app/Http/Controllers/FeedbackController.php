@@ -19,7 +19,7 @@ class FeedbackController extends Controller
         $course = Course::where('course_code', $formattedCourseCode)->first();
         if (!$course) {
             Log::error("Course not found", ['courseCode' => $formattedCourseCode]);
-            return redirect()->back()->with('error', 'Kursus tidak ditemukan.');
+            return redirect()->back()->with('error', 'Matkul tidak ditemukan.');
         }
 
         $courseCodeWithoutDash = strtolower(str_replace('-', '', $course->course_code));
