@@ -53,6 +53,7 @@ Route::middleware(['auth:lecturer'])->group(function () {
     Route::patch('/profile/lecturer', [ProfileController::class, 'update'])->name('profile.update.lecturer');
     Route::post('/questions/store', [QuestionController::class, 'store'])->name('questions.store');
     Route::post('/questions/import', [QuestionController::class, 'import'])->name('questions.import');
+    Route::get('/lecturer/{courseCode}/student-tasks', [LecturerCourseController::class, 'showStudentTasks'])->name('lecturer.course.student-tasks.showing');
 });
 
 Route::get('/admin/course-assignments/{course_code}', CourseAssignments::class)

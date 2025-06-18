@@ -11,6 +11,7 @@ use App\Models\StudentAttempt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class LecturerCourseController extends Controller
 {
@@ -133,11 +134,12 @@ class LecturerCourseController extends Controller
             2 => ['easy' => 0, 'medium' => 0, 'hard' => 0, 'total' => 0],
             3 => ['easy' => 0, 'medium' => 0, 'hard' => 0, 'total' => 0],
             4 => ['easy' => 0, 'medium' => 0, 'hard' => 0, 'total' => 0],
+            5 => ['easy' => 0, 'medium' => 0, 'hard' => 0, 'total' => 0],
         ];
 
         // Calculate counts per task
         foreach ($questions as $question) {
-            if ($question->task_number && in_array($question->task_number, [1, 2, 3, 4])) {
+            if ($question->task_number && in_array($question->task_number, [1, 2, 3, 4, 5])) {
                 $task = $question->task_number;
                 $difficulty = $question->difficulty;
                 if (in_array($difficulty, ['easy', 'medium', 'hard'])) {
@@ -153,6 +155,43 @@ class LecturerCourseController extends Controller
         return view('lecture.banksoal', compact('course', 'questions', 'courseCodeWithoutDash', 'questionCounts'));
     }
 
+    public function showStudentTasks($courseCode)
+    {
+        $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
+        $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+        $courseCodeWithoutDash = str_replace('-', '', $formattedCourseCode);
+
+        // Calculate average scores and tasks completed per student
+        $averageScores = StudentAttempt::where('course_id', $course->id)
+            ->join('students', 'student_attempts.student_id', '=', 'students.id')
+            ->select(
+                'students.id',
+                'students.name',
+                'students.nim',
+                DB::raw('AVG(student_attempts.score) as average_score'),
+                DB::raw('COUNT(student_attempts.id) as tasks_completed')
+            )
+            ->groupBy('students.id', 'students.name', 'students.nim')
+            ->orderBy('students.name')
+            ->get();
+
+        // Fetch task details for each task (1-5)
+        $taskDetails = [];
+        foreach ([1, 2, 3, 4, 5] as $taskNumber) {
+            $taskDetails[$taskNumber] = StudentAttempt::where('course_id', $course->id)
+                ->where('task_number', $taskNumber)
+                ->with('student')
+                ->orderBy('student_id')
+                ->get();
+        }
+
+        return view('lecture.tugasmahasiswa', compact(
+            'course',
+            'courseCodeWithoutDash',
+            'averageScores',
+            'taskDetails'
+        ));
+    }
 
     public function storeMaterial(Request $request, $courseCode)
     {
@@ -388,7 +427,6 @@ class LecturerCourseController extends Controller
         }
     }
 
-
     public function getStudentTasks($courseCode)
     {
         try {
@@ -422,6 +460,10 @@ class LecturerCourseController extends Controller
         try {
             $formattedCourseCode = strtoupper(preg_replace('/([a-zA-Z]+)(\d+)([a-zA-Z]*)/', '$1$2-$3', $courseCode));
             $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
+
+            if (!in_array($task_number, [1, 2, 3, 4, 5])) {
+                return response()->json(['message' => 'Nomor tugas tidak valid'], 422);
+            }
 
             $attempts = StudentAttempt::where('course_id', $course->id)
                 ->where('task_number', $task_number)

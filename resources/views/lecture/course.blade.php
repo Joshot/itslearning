@@ -161,14 +161,6 @@ use Illuminate\Support\Facades\Session;
         background: #b91c1c;
         transform: translateY(-2px);
     }
-    .btn-task {
-        background: #6b7280;
-        color: white;
-    }
-    .btn-task:hover {
-        background: #4b5563;
-        transform: translateY(-2px);
-    }
     input, textarea {
         border: 1px solid #d1d5db;
         border-radius: 0.5rem;
@@ -268,27 +260,6 @@ use Illuminate\Support\Facades\Session;
     .swal2-popup {
         font-size: 1rem !important;
         padding: 1rem !important;
-    }
-    .task-popup {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-    .task-popup table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 1rem;
-    }
-    .task-popup th, .task-popup td {
-        padding: 0.5rem;
-        border: 1px solid #d1d5db;
-        text-align: left;
-    }
-    .task-popup th {
-        background: #106587;
-        color: white;
-    }
-    .task-popup .task-btn {
-        margin: 0.25rem;
     }
     .container {
         max-width: 100%;
@@ -440,7 +411,7 @@ use Illuminate\Support\Facades\Session;
                 </h2>
                 <div class="flex gap-2 mb-4">
                     <a href="{{ route('lecture.banksoal', ['courseCode' => $courseCodeWithoutDash]) }}" class="btn btn-info flex-1">Bank Soal</a>
-                    <button onclick="showStudentTasks()" class="btn btn-task flex-1">Tugas Mahasiswa</button>
+                    <a href="{{ route('lecturer.course.student-tasks.showing', ['courseCode' => $courseCodeWithoutDash]) }}" class="btn btn-primary flex-1">Tugas Mahasiswa</a>
                 </div>
                 <div id="quizzesSection" class="quizzes-section">
                     <h3 class="text-sm font-semibold text-gray-700 mb-2">Daftar Tugas</h3>
@@ -715,100 +686,6 @@ use Illuminate\Support\Facades\Session;
         });
     }
 
-    function showStudentTasks() {
-        axios.get(`/lecturer/course/{{ $courseCodeWithoutDash }}/student-tasks`, {
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            }
-        }).then(response => {
-            const tasks = response.data.tasks;
-            let html = '<h3>Pilih Tugas:</h3>';
-            tasks.forEach(task => {
-                html += `<button class="btn btn-info task-btn" onclick="showTaskDetails(${task.task_number}, '${task.title}', ${task.quiz_id})">Tugas ${task.task_number}</button>`;
-            });
-
-            Swal.fire({
-                title: 'Tugas Mahasiswa',
-                html: html,
-                showConfirmButton: false,
-                showCancelButton: true,
-                cancelButtonColor: '#d33',
-                cancelButtonText: 'Tutup',
-                customClass: {
-                    popup: 'task-popup'
-                }
-            });
-        }).catch(error => {
-            Swal.fire({
-                title: 'Error!',
-                text: error.response?.data?.message || 'Gagal memuat data tugas.',
-                icon: 'error',
-                confirmButtonColor: '#106587'
-            });
-        });
-    }
-
-    function showTaskDetails(taskNumber, taskTitle, quizId) {
-        axios.get(`/lecturer/course/{{ $courseCodeWithoutDash }}/student-tasks/${taskNumber}`, {
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            }
-        }).then(response => {
-            const attempts = response.data.attempts;
-            let html = `<h3>Detail Tugas ${taskNumber}: ${taskTitle}</h3>`;
-            if (attempts.length === 0) {
-                html += '<p>Belum ada mahasiswa yang mengerjakan tugas ini.</p>';
-            } else {
-                html += `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Nama (NIM)</th>
-                                <th>Nilai</th>
-                                <th>Kesalahan Easy</th>
-                                <th>Kesalahan Medium</th>
-                                <th>Kesalahan Hard</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-                attempts.forEach(attempt => {
-                    if (attempt.quiz_id === quizId) {
-                        html += `
-                            <tr>
-                                <td>${attempt.student_name} (${attempt.student_nim})</td>
-                                <td>${attempt.score}</td>
-                                <td>${attempt.errors_easy}</td>
-                                <td>${attempt.errors_medium}</td>
-                                <td>${attempt.errors_hard}</td>
-                            </tr>
-                        `;
-                    }
-                });
-                html += '</tbody></table>';
-            }
-
-            Swal.fire({
-                title: `Tugas ${taskNumber}`,
-                html: html,
-                showConfirmButton: false,
-                showCancelButton: true,
-                cancelButtonColor: '#d33',
-                cancelButtonText: 'Tutup',
-                customClass: {
-                    popup: 'task-popup'
-                }
-            });
-        }).catch(error => {
-            Swal.fire({
-                title: 'Error!',
-                text: error.response?.data?.message || 'Gagal memuat detail tugas.',
-                icon: 'error',
-                confirmButtonColor: '#106587'
-            });
-        });
-    }
-
     function markFormDirty(week) {
         formDirtyStates[week] = true;
     }
@@ -1012,26 +889,7 @@ use Illuminate\Support\Facades\Session;
                         cancelButtonText: 'Batal'
                     }).then((saveResult) => {
                         if (saveResult.isConfirmed) {
-                            const dirtyForms = document.querySelectorAll('form[id^="material-form-"]');
-                            let submitted = 0;
-                            dirtyForms.forEach((form, index) => {
-                                if (formDirtyStates[form.querySelector('input[name="week"]').value]) {
-                                    setTimeout(() => {
-                                        showLoading(new Event('submit'), form);
-                                    }, index * 1000);
-                                    submitted++;
-                                }
-                            });
-                            if (!submitted) {
-                                Swal.fire({
-                                    title: 'Informasi',
-                                    text: 'Tidak ada perubahan untuk disimpan.',
-                                    icon: 'info',
-                                    confirmButtonColor: '#106587'
-                                }).then(() => {
-                                    window.location.href = "{{ route('lecturer.dashboard') }}";
-                                });
-                            }
+                            saveAllForms();
                         }
                     });
                 }
@@ -1041,43 +899,100 @@ use Illuminate\Support\Facades\Session;
         }
     }
 
+    function saveAllForms() {
+        const forms = document.querySelectorAll('form[id^="material-form-"]');
+        let completed = 0;
+        const total = forms.length;
+
+        if (total === 0) {
+            Swal.fire({
+                title: 'Informasi',
+                text: 'Tidak ada perubahan untuk disimpan.',
+                icon: 'info',
+                confirmButtonColor: '#106587'
+            }).then(() => {
+                window.location.href = "{{ route('lecturer.dashboard') }}";
+            });
+            return;
+        }
+
+        forms.forEach(form => {
+            const week = form.querySelector('input[name="week"]').value;
+            if (formDirtyStates[week]) {
+                const formData = new FormData(form);
+                axios.post(form.action, formData, {
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    }
+                }).then(response => {
+                    completed++;
+                    if (completed === total) {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: 'Semua perubahan telah disimpan.',
+                            icon: 'success',
+                            confirmButtonColor: '#106587'
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    }
+                }).catch(error => {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: error.response?.data?.message || 'Gagal menyimpan perubahan.',
+                        icon: 'error',
+                        confirmButtonColor: '#106587'
+                    });
+                });
+            } else {
+                completed++;
+                if (completed === total) {
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Semua perubahan telah disimpan.',
+                        icon: 'success',
+                        confirmButtonColor: '#106587'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                }
+            }
+        });
+    }
+
     function confirmCreateTask(taskNumber, week) {
+        const titleInput = document.getElementById(`task-title-${week}`);
+        if (!titleInput.value.trim()) {
+            Swal.fire({
+                title: 'Peringatan',
+                text: 'Judul tugas tidak boleh kosong.',
+                icon: 'warning',
+                confirmButtonColor: '#106587'
+            });
+            return;
+        }
+
         Swal.fire({
             title: 'Konfirmasi',
-            text: `Apakah Anda yakin ingin membuat Tugas ${taskNumber}?`,
+            text: `Apakah Anda yakin ingin membuat Tugas ${taskNumber} untuk Minggu ${week}?`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#106587',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Yakin',
-            cancelButtonText: 'Cancel'
+            confirmButtonText: 'Buat',
+            cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                const titleInput = document.getElementById(`task-title-${week}`);
-                if (!titleInput.value.trim()) {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Judul tugas tidak boleh kosong!',
-                        icon: 'error',
-                        confirmButtonColor: '#106587'
-                    });
-                    return;
-                }
                 document.getElementById(`create-task-form-${week}`).submit();
-                Swal.fire({
-                    title: 'Informasi',
-                    text: 'Membuat tugas...',
-                    icon: 'info',
-                    confirmButtonColor: '#106587',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
             }
         });
     }
 
     function confirmDelete(event) {
         event.preventDefault();
+        const form = event.target;
+
         Swal.fire({
             title: 'Konfirmasi',
             text: 'Apakah Anda yakin ingin menghapus file ini?',
@@ -1086,72 +1001,15 @@ use Illuminate\Support\Facades\Session;
             confirmButtonColor: '#106587',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Hapus',
-            cancelButtonText: 'Cancel'
+            cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                const form = event.target.closest('form');
-                const formData = new FormData(form);
-                formData.append('_method', 'DELETE');
-
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', form.action, true);
-                xhr.setRequestHeader('X-CSRF-TOKEN', document.querySelector('meta[name="csrf-token"]').content);
-                xhr.setRequestHeader('Accept', 'application/json');
-
-                xhr.onload = function() {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            const data = JSON.parse(xhr.responseText);
-                            Swal.fire({
-                                title: 'Berhasil!',
-                                text: data.message || 'File berhasil dihapus!',
-                                icon: 'success',
-                                confirmButtonColor: '#106587'
-                            }).then(() => {
-                                window.location.reload();
-                            });
-                        } catch (e) {
-                            Swal.fire({
-                                title: 'Error!',
-                                text: 'Respon server tidak valid.',
-                                icon: 'error',
-                                confirmButtonColor: '#106587'
-                            });
-                        }
-                    } else {
-                        let errorMessage = 'Gagal menghapus file.';
-                        try {
-                            const error = JSON.parse(xhr.responseText);
-                            if (error.message) {
-                                errorMessage = error.message;
-                            }
-                        } catch (e) {
-                            errorMessage = 'Terjadi kesalahan pada server.';
-                        }
-                        Swal.fire({
-                            title: 'Error!',
-                            text: errorMessage,
-                            icon: 'error',
-                            confirmButtonColor: '#106587'
-                        });
-                    }
-                };
-
-                xhr.onerror = function() {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Koneksi gagal. Periksa jaringan Anda.',
-                        icon: 'error',
-                        confirmButtonColor: '#106587'
-                    });
-                };
-
-                xhr.send(formData);
+                form.submit();
             }
         });
     }
 
-    @if (Session::has('success'))
+    @if(Session::has('success'))
         document.addEventListener('DOMContentLoaded', function() {
             Swal.fire({
                 title: 'Berhasil!',
@@ -1162,23 +1020,12 @@ use Illuminate\Support\Facades\Session;
         });
     @endif
 
-    @if ($errors->any() || Session::has('error'))
+    @if(Session::has('error'))
         document.addEventListener('DOMContentLoaded', function() {
             Swal.fire({
                 title: 'Error!',
-                text: '{{ Session::get('error') ?? $errors->first() }}',
+                text: '{{ Session::get('error') }}',
                 icon: 'error',
-                confirmButtonColor: '#106587'
-            });
-        });
-    @endif
-
-    @if (Session::has('material_uploaded'))
-        document.addEventListener('DOMContentLoaded', function() {
-            Swal.fire({
-                title: 'Berhasil!',
-                text: '{{ Session::get('material_uploaded') }}',
-                icon: 'success',
                 confirmButtonColor: '#106587'
             });
         });
