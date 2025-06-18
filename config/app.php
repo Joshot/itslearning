@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'E-learningKu'),
 
     /*
     |--------------------------------------------------------------------------
@@ -122,5 +122,20 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Logo Path
+    |--------------------------------------------------------------------------
+    |
+    | This value specifies the path to the application's logo, relative to the
+    | public directory. It can be used in Blade templates to display the logo.
+    | Example: 'images/new-logo.png' resolves to public/images/new-logo.png.
+    |
+    */
+
+    'logo_path' => env('APP_LOGO_PATH', 'images/new-logo.png'),
+
 
 ];
