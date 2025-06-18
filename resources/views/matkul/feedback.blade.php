@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Feedback - ' . ($course->course_name ?? 'Course'))
+@section('title', 'Feedback - {{ $course->course_name ?? "Course" }}')
 
 @section('content')
 <style>
@@ -284,6 +284,7 @@
 
 <div class="container">
     <div class="dashboard-container">
+        <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-wrapper">
                 <div class="sidebar-header">
@@ -304,15 +305,14 @@
                     @foreach ($scores as $task => $scoreData)
                     <div class="score-card">
                         <p class="font-semibold">Tugas {{ $task }}</p>
-                        <p class="score-value">{{ $scoreData['score'] }}/100 ({{ $grades[$task] }})</p>
+                        <p class="score-value">{{ $scoreData['score'] }}/100 ({{ $grades[$task] ?? 'E' }})
+                            @if (isset($failed_tasks) && in_array($task, $failed_tasks))
+                            <span class="text-red-600">[Gagal]</span>
+                            @endif
+                        </p>
                     </div>
                     @endforeach
-                    @if ($feedback && $feedback->additional_quiz_id && $additionalAttempt)
-                    <div class="score-card">
-                        <p class="font-semibold">Rata-rata</p>
-                        <p class="average-score">{{ number_format($feedback->average_score, 2) }}/100</p>
-                    </div>
-                    @else
+                    @if ($feedback)
                     <div class="score-card">
                         <p class="font-semibold">Rata-rata</p>
                         <p class="average-score">{{ number_format($feedback->average_score, 2) }}/100</p>
@@ -321,8 +321,18 @@
                 </div>
             </div>
         </div>
+
+        <!-- Feedback Content -->
         <div class="feedback-container">
             <h1 class="text-2xl font-semibold mb-6 text-gray-800">Feedback Matkul {{ $course->course_name }}</h1>
+            @if (!$feedback)
+            <!-- No Feedback Available -->
+            <div class="main-feedback-card">
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Feedback</h3>
+                <p class="text-red-600">Feedback belum tersedia. Selesaikan semua tugas terlebih dahulu.</p>
+            </div>
+            @else
+            <!-- Feedback Available -->
             <div class="card-row">
                 <div class="main-feedback-card">
                     <h3 class="text-lg font-semibold text-gray-800 mb-2">Feedback</h3>
@@ -341,18 +351,29 @@
                     <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">Calon Soal Tugas Tambahan</h3>
                     <ul class="list-disc pl-5 text-gray-700">
                         @foreach ($task_distribution as $task => $dist)
-                        <li>Tugas {{ $task }}: Easy {{ $dist['easy'] }}, Medium {{ $dist['medium'] }}, Hard {{ $dist['hard'] }}</li>
+                        <li>Tugas {{ $task }}: {{ $dist['easy'] }} mudah, {{ $dist['medium'] }} sedang, {{ $dist['hard'] }} sulit</li>
                         @endforeach
                     </ul>
                     @endif
                 </div>
                 <div class="additional-task-wrapper">
-                    @if ($feedback && $feedback->additional_quiz_id && !$additionalAttempt)
+                    @if ($isPerfectScore)
                     <div class="additional-task-card">
                         <h3 class="text-lg font-semibold text-gray-800 mb-2">Tugas Tambahan</h3>
-                        <p>Kamu perlu mengerjakan tugas tambahan sebanyak 20 soal.</p>
-                        <p>Distribusi: {{ $question_distribution['easy'] }} easy, {{ $question_distribution['medium'] }} medium, {{ $question_distribution['hard'] }} hard</p>
-                        <p>Bobot: Easy {{ number_format($question_weights['easy'], 2) }}, Medium {{ number_format($question_weights['medium'], 2) }}, Hard {{ number_format($question_weights['hard'], 2) }}</p>
+                        <p class="text-green-600 font-semibold">Wow, hebat! Nilai kamu sudah sempurna.</p>
+                    </div>
+                    @elseif ($feedback && $feedback->additional_quiz_id && !$additionalAttempt)
+                    <div class="additional-task-card">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Tugas Tambahan</h3>
+                        <p>
+                            @if (!empty($failed_tasks))
+                            Kamu perlu mengerjakan tugas tambahan karena ada tugas yang gagal.
+                            @else
+                            Kamu bisa mengerjakan tugas tambahan untuk meningkatkan nilai.
+                            @endif
+                        </p>
+                        <p>Distribusi: {{ $question_distribution['easy'] ?? 0 }} mudah, {{ $question_distribution['medium'] ?? 0 }} sedang, {{ $question_distribution['hard'] ?? 0 }} sulit</p>
+                        <p>Bobot: Mudah {{ number_format($question_weights['easy'] ?? 0, 2) }}, Sedang {{ number_format($question_weights['medium'] ?? 0, 2) }}, Sulit {{ number_format($question_weights['hard'] ?? 0, 2) }}</p>
                         <a href="javascript:void(0)"
                            onclick="confirmStartQuiz('{{ route('kuis.start', ['courseCode' => $courseCode, 'quizId' => $feedback->additional_quiz_id]) }}', 5)"
                            class="btn btn-primary mt-2">Kerjakan Tugas Tambahan</a>
@@ -361,10 +382,13 @@
                     <div class="additional-task-card">
                         <h3 class="text-lg font-semibold text-gray-800 mb-2">Tugas Tambahan</h3>
                         <p>Tugas tambahan telah selesai dengan nilai: <span class="score-value">{{ $additionalAttempt->score }}/100</span>.</p>
+                        <a href="{{ route('kuis.review', ['courseCode' => $courseCode, 'quizId' => $feedback->additional_quiz_id]) }}"
+                           class="btn btn-primary mt-2">Review Tugas Tambahan</a>
                     </div>
                     @endif
                 </div>
             </div>
+            @endif
         </div>
     </div>
 </div>
@@ -389,18 +413,13 @@
         });
     }
 
-    @if (session('feedback_popup'))
+    @if (isset($popup))
         Swal.fire({
-            title: '{{ session('feedback_popup.title') }}',
-            text: `{!! nl2br(e(session('feedback_popup.text'))) !!}`,
-            icon: 'info',
+            title: '{!! $popup["title"] !!}',
+            text: '{!! nl2br(e($popup["text"])) !!}',
+            icon: '{{ $popup["icon"] }}',
             confirmButtonColor: '#106587',
-            confirmButtonText: 'Lihat Detail',
-            allowOutsideClick: false
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = '{{ session('feedback_popup.redirect') }}';
-            }
+            confirmButtonText: 'OK'
         });
     @endif
 </script>

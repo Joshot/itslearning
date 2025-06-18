@@ -323,7 +323,6 @@ class QuizController extends Controller
         }
     }
 
-
     public function reviewQuiz($courseCode, $quizId)
     {
         $studentId = Auth::guard('student')->id();
@@ -477,47 +476,52 @@ class QuizController extends Controller
             'studentId' => $studentId,
             'courseId' => $courseId,
             'failedTasks' => array_keys($failedTasks),
-            'scores' => $scores
+            'scores' => $scores,
+            'averageScore' => $averageScore
         ]);
 
-        // Hitung total errors dari kolom errors_easy, errors_medium, errors_hard untuk tugas gagal
+        // Calculate total errors for question distribution
         $errors = ['easy' => 0, 'medium' => 0, 'hard' => 0];
-        $failedTaskNumbers = array_keys($failedTasks);
-        $num_failed_tasks = count($failedTasks);
+        $taskNumbers = empty($failedTasks) ? [1, 2, 3, 4] : array_keys($failedTasks); // Use all tasks if no failures
+        $num_failed_tasks = count($taskNumbers);
 
-        if (!empty($failedTaskNumbers)) {
-            foreach ($attempts->whereIn('task_number', $failedTaskNumbers) as $attempt) {
-                $errors['easy'] += $attempt->errors_easy ?? 0;
-                $errors['medium'] += $attempt->errors_medium ?? 0;
-                $errors['hard'] += $attempt->errors_hard ?? 0;
-            }
+        foreach ($attempts->whereIn('task_number', $taskNumbers) as $attempt) {
+            $errors['easy'] += $attempt->errors_easy ?? 0;
+            $errors['medium'] += $attempt->errors_medium ?? 0;
+            $errors['hard'] += $attempt->errors_hard ?? 0;
         }
 
-        Log::info("Errors calculated", ['errors' => $errors]);
+        Log::info("Errors calculated", [
+            'studentId' => $studentId,
+            'courseId' => $courseId,
+            'errors' => $errors,
+            'taskNumbers' => $taskNumbers
+        ]);
 
-        // Jumlah soal per tugas
-        $questions_per_task = [
-            'easy' => 4,
-            'medium' => 3,
-            'hard' => 3
+        // Default feedback data
+        $bnResult = [
+            'distribution' => ['easy' => 9, 'medium' => 6, 'hard' => 5],
+            'task_distribution' => [],
+            'weights' => ['easy' => 5, 'medium' => 10, 'hard' => 15]
         ];
+        $task_distribution = [];
+        $createAdditionalQuiz = false;
 
-        // Perhitungan Distribusi Soal dan Bobot untuk T5 menggunakan Bayesian Network
-        $num_questions = 20;
-        $bnResult = null;
-
-        if ($num_failed_tasks == 0) {
-            $bnResult = [
-                'distribution' => ['easy' => 13, 'medium' => 3, 'hard' => 4],
-                'task_distribution' => [],
-                'weights' => ['easy' => 5, 'medium' => 10, 'hard' => 15]
+        // Generate Task 5 if average < 85 or there are failed tasks
+        if ($averageScore < 85 || !empty($failedTasks)) {
+            $createAdditionalQuiz = true;
+            $questions_per_task = [
+                'easy' => 4,
+                'medium' => 3,
+                'hard' => 3
             ];
-        } else {
+            $num_questions = 20;
+
             // Bayesian Network Setup
             $difficulties = ['easy', 'medium', 'hard'];
-            $tasks = $failedTaskNumbers;
+            $tasks = $taskNumbers;
 
-            // Prior probabilities untuk Difficulty (D)
+            // Prior probabilities for Difficulty (D)
             $total_questions_per_task = array_sum($questions_per_task);
             $prior_D = [
                 'easy' => $questions_per_task['easy'] / $total_questions_per_task,
@@ -532,14 +536,14 @@ class QuizController extends Controller
                 'hard' => $questions_per_task['hard'] * $num_failed_tasks
             ];
 
-            // Hitung success rates
+            // Calculate success rates
             $success_rates = [];
             foreach ($difficulties as $d) {
                 $error_rate = $errors[$d] / max(1, $total_soal_attempts[$d]);
                 $success_rates[$d] = max(0.0001, 1 - $error_rate);
             }
 
-            // Hitung posterior P(S = true | D)
+            // Calculate posterior P(S = true | D)
             $total_posterior = 0;
             $posterior_S = [];
             foreach ($difficulties as $d) {
@@ -547,20 +551,20 @@ class QuizController extends Controller
                 $total_posterior += $posterior_S[$d];
             }
 
-            // Normalisasi posterior
+            // Normalize posterior
             $distribusi_soal = [];
             foreach ($difficulties as $d) {
                 $distribusi_soal[$d] = ($total_posterior > 0) ? $posterior_S[$d] / $total_posterior : (1 / count($difficulties));
             }
 
-            // Jumlah soal berdasarkan posterior
+            // Calculate question distribution
             $questions_per_difficulty = [
                 'easy' => round($num_questions * $distribusi_soal['easy']),
                 'medium' => round($num_questions * $distribusi_soal['medium']),
                 'hard' => round($num_questions * $distribusi_soal['hard'])
             ];
 
-            // Penyesuaian distribusi
+            // Adjust distribution
             $total = array_sum($questions_per_difficulty);
             $max_attempts = ceil(log($num_failed_tasks * count($difficulties), 2));
             $attempt = 0;
@@ -592,7 +596,7 @@ class QuizController extends Controller
                 $total = array_sum($questions_per_difficulty);
             }
 
-            // Validasi question_distribution
+            // Validate question_distribution
             if ($total != 20 || !isset($questions_per_difficulty['easy'], $questions_per_difficulty['medium'], $questions_per_difficulty['hard'])) {
                 Log::error("Invalid question distribution before task allocation", [
                     'studentId' => $studentId,
@@ -603,37 +607,36 @@ class QuizController extends Controller
                 $questions_per_difficulty = ['easy' => 9, 'medium' => 6, 'hard' => 5];
             }
 
-            // Distribusi ke failed tasks dengan minimal 1 soal per kesulitan per tugas
-            $task_distribution = [];
-            foreach ($failedTaskNumbers as $task) {
+            // Distribute questions to tasks
+            foreach ($taskNumbers as $task) {
                 $task_distribution[strval($task)] = ['easy' => 1, 'medium' => 1, 'hard' => 1];
             }
 
-            // Hitung total soal yang sudah dialokasikan
+            // Calculate allocated questions
             $allocated_questions = [
                 'easy' => $num_failed_tasks,
                 'medium' => $num_failed_tasks,
                 'hard' => $num_failed_tasks
             ];
 
-            // Distribusi sisa soal secara merata dengan sisa berdasarkan error
+            // Distribute remaining questions
             foreach (['easy', 'medium', 'hard'] as $difficulty) {
                 $remaining_count = $questions_per_difficulty[$difficulty] - $allocated_questions[$difficulty];
                 if ($remaining_count > 0) {
                     $base_count = floor($remaining_count / $num_failed_tasks);
                     $remainder = $remaining_count % $num_failed_tasks;
 
-                    foreach ($failedTaskNumbers as $task) {
+                    foreach ($taskNumbers as $task) {
                         $task_distribution[strval($task)][$difficulty] += $base_count;
                         $allocated_questions[$difficulty] += $base_count;
                     }
 
                     if ($remainder > 0) {
                         $task_errors = [];
-                        foreach ($failedTaskNumbers as $task) {
+                        foreach ($taskNumbers as $task) {
                             $task_errors[$task] = $attempts->where('task_number', $task)->first()->{"errors_$difficulty"} ?? 0;
                         }
-                        usort($failedTaskNumbers, function($a, $b) use ($task_errors) {
+                        usort($taskNumbers, function($a, $b) use ($task_errors) {
                             if ($task_errors[$a] == $task_errors[$b]) {
                                 return $a <=> $b;
                             }
@@ -641,14 +644,14 @@ class QuizController extends Controller
                         });
 
                         for ($i = 0; $i < $remainder; $i++) {
-                            $task_distribution[strval($failedTaskNumbers[$i])][$difficulty]++;
+                            $task_distribution[strval($taskNumbers[$i])][$difficulty]++;
                             $allocated_questions[$difficulty]++;
                         }
                     }
                 }
             }
 
-            // Validasi distribusi
+            // Validate task distribution
             $actual_counts = ['easy' => 0, 'medium' => 0, 'hard' => 0];
             foreach ($task_distribution as $task => $dist) {
                 foreach (['easy', 'medium', 'hard'] as $difficulty) {
@@ -656,7 +659,6 @@ class QuizController extends Controller
                 }
             }
 
-            // Pastikan task_distribution sesuai dengan question_distribution
             foreach (['easy', 'medium', 'hard'] as $difficulty) {
                 if ($actual_counts[$difficulty] != $questions_per_difficulty[$difficulty]) {
                     Log::error("Task distribution does not match question distribution", [
@@ -669,7 +671,7 @@ class QuizController extends Controller
                     ]);
                     $questions_per_difficulty = ['easy' => 9, 'medium' => 6, 'hard' => 5];
                     $task_distribution = [];
-                    foreach ($failedTaskNumbers as $task) {
+                    foreach ($taskNumbers as $task) {
                         $task_distribution[strval($task)] = ['easy' => 1, 'medium' => 1, 'hard' => 1];
                     }
                     $allocated_questions = [
@@ -682,23 +684,23 @@ class QuizController extends Controller
                         if ($remaining_count > 0) {
                             $base_count = floor($remaining_count / $num_failed_tasks);
                             $remainder = $remaining_count % $num_failed_tasks;
-                            foreach ($failedTaskNumbers as $task) {
+                            foreach ($taskNumbers as $task) {
                                 $task_distribution[strval($task)][$difficulty] += $base_count;
                                 $allocated_questions[$difficulty] += $base_count;
                             }
                             if ($remainder > 0) {
                                 $task_errors = [];
-                                foreach ($failedTaskNumbers as $task) {
+                                foreach ($taskNumbers as $task) {
                                     $task_errors[$task] = $attempts->where('task_number', $task)->first()->{"errors_$difficulty"} ?? 0;
                                 }
-                                usort($failedTaskNumbers, function($a, $b) use ($task_errors) {
+                                usort($taskNumbers, function($a, $b) use ($task_errors) {
                                     if ($task_errors[$a] == $task_errors[$b]) {
                                         return $a <=> $b;
                                     }
                                     return $task_errors[$b] <=> $task_errors[$a];
                                 });
                                 for ($i = 0; $i < $remainder; $i++) {
-                                    $task_distribution[strval($failedTaskNumbers[$i])][$difficulty]++;
+                                    $task_distribution[strval($taskNumbers[$i])][$difficulty]++;
                                     $allocated_questions[$difficulty]++;
                                 }
                             }
@@ -716,26 +718,26 @@ class QuizController extends Controller
                 'question_distribution' => $questions_per_difficulty
             ]);
 
-            // Hitung bobot menggunakan Bayesian Network
+            // Calculate weights using Bayesian Network
             $default_weights = ['easy' => 5, 'medium' => 10, 'hard' => 15];
             $initial_weights = [];
             foreach ($difficulties as $d) {
                 $initial_weights[$d] = $default_weights[$d] * ($posterior_S[$d] / max(0.0001, $total_posterior));
             }
 
-            // Total bobot awal
+            // Total initial weight
             $total_initial_weight = 0;
             foreach ($difficulties as $d) {
                 $total_initial_weight += $initial_weights[$d] * $questions_per_difficulty[$d];
             }
 
-            // Normalisasi bobot agar 20 soal benar = 100
+            // Normalize weights
             $weights = [];
             foreach ($difficulties as $d) {
                 $weights[$d] = ($total_initial_weight > 0) ? (100 * $initial_weights[$d] / $total_initial_weight) : ($default_weights[$d] / array_sum($default_weights) * 100 / $questions_per_difficulty[$d]);
             }
 
-            // Penyesuaian jika bobot tidak memenuhi syarat easy < medium < hard
+            // Adjust weights if not easy < medium < hard
             if ($weights['easy'] >= $weights['medium'] || $weights['medium'] >= $weights['hard']) {
                 $total_default = ($default_weights['easy'] * $questions_per_difficulty['easy']) +
                     ($default_weights['medium'] * $questions_per_difficulty['medium']) +
@@ -754,11 +756,11 @@ class QuizController extends Controller
             ];
         }
 
-        // Validasi bnResult sebelum menyimpan
-        if (!is_array($bnResult['distribution']) ||
-            !isset($bnResult['distribution']['easy'], $bnResult['distribution']['medium'], $bnResult['distribution']['hard']) ||
-            array_sum($bnResult['distribution']) != 20 ||
-            !is_array($bnResult['task_distribution'])) {
+        // Validate bnResult
+        if ($createAdditionalQuiz && (!is_array($bnResult['distribution']) ||
+                !isset($bnResult['distribution']['easy'], $bnResult['distribution']['medium'], $bnResult['distribution']['hard']) ||
+                array_sum($bnResult['distribution']) != 20 ||
+                !is_array($bnResult['task_distribution']))) {
             Log::error("Invalid bnResult before saving", [
                 'studentId' => $studentId,
                 'courseId' => $courseId,
@@ -766,13 +768,12 @@ class QuizController extends Controller
             ]);
             $bnResult = [
                 'distribution' => ['easy' => 9, 'medium' => 6, 'hard' => 5],
-                'task_distribution' => $num_failed_tasks > 0 ? [] : [],
+                'task_distribution' => [],
                 'weights' => ['easy' => 5, 'medium' => 10, 'hard' => 15]
             ];
-            // Rebuild task_distribution if needed
             if ($num_failed_tasks > 0) {
                 $task_distribution = [];
-                foreach ($failedTaskNumbers as $task) {
+                foreach ($taskNumbers as $task) {
                     $task_distribution[strval($task)] = ['easy' => 1, 'medium' => 1, 'hard' => 1];
                 }
                 $allocated_questions = [
@@ -785,23 +786,23 @@ class QuizController extends Controller
                     if ($remaining_count > 0) {
                         $base_count = floor($remaining_count / $num_failed_tasks);
                         $remainder = $remaining_count % $num_failed_tasks;
-                        foreach ($failedTaskNumbers as $task) {
+                        foreach ($taskNumbers as $task) {
                             $task_distribution[strval($task)][$difficulty] += $base_count;
                             $allocated_questions[$difficulty] += $base_count;
                         }
                         if ($remainder > 0) {
                             $task_errors = [];
-                            foreach ($failedTaskNumbers as $task) {
+                            foreach ($taskNumbers as $task) {
                                 $task_errors[$task] = $attempts->where('task_number', $task)->first()->{"errors_$difficulty"} ?? 0;
                             }
-                            usort($failedTaskNumbers, function($a, $b) use ($task_errors) {
+                            usort($taskNumbers, function($a, $b) use ($task_errors) {
                                 if ($task_errors[$a] == $task_errors[$b]) {
                                     return $a <=> $b;
                                 }
                                 return $task_errors[$b] <=> $task_errors[$a];
                             });
                             for ($i = 0; $i < $remainder; $i++) {
-                                $task_distribution[strval($failedTaskNumbers[$i])][$difficulty]++;
+                                $task_distribution[strval($taskNumbers[$i])][$difficulty]++;
                                 $allocated_questions[$difficulty]++;
                             }
                         }
@@ -835,8 +836,18 @@ class QuizController extends Controller
                     $feedbackText .= "- Tugas $task: {$dist['easy']} easy, {$dist['medium']} medium, {$dist['hard']} hard\n";
                 }
             }
+        } elseif ($averageScore < 85) {
+            $feedbackText .= "Mantap! Semua tugas lulus, tapi rata-ratamu di bawah A. ";
+            $feedbackText .= "Kamu bisa mengerjakan Tugas Tambahan (Tugas 5) untuk meningkatkan nilai: {$bnResult['distribution']['easy']} mudah, {$bnResult['distribution']['medium']} sedang, {$bnResult['distribution']['hard']} sulit.\n";
+            $feedbackText .= "Bobot: Mudah " . number_format($bnResult['weights']['easy'], 2) . ", Medium " . number_format($bnResult['weights']['medium'], 2) . ", Hard " . number_format($bnResult['weights']['hard'], 2) . ".\n";
+            if (!empty($bnResult['task_distribution'])) {
+                $feedbackText .= "Calon soal tugas tambahan:\n";
+                foreach ($bnResult['task_distribution'] as $task => $dist) {
+                    $feedbackText .= "- Tugas $task: {$dist['easy']} easy, {$dist['medium']} medium, {$dist['hard']} hard\n";
+                }
+            }
         } else {
-            $feedbackText .= "Mantap!! semua tugas lulus!";
+            $feedbackText .= "Wow, hebat! Nilai kamu sudah sempurna. Tidak perlu mengerjakan Tugas Tambahan.";
         }
 
         try {
@@ -849,7 +860,8 @@ class QuizController extends Controller
                     'question_distribution' => json_encode($bnResult['distribution']),
                     'question_weights' => json_encode($bnResult['weights']),
                     'task_distribution' => json_encode($bnResult['task_distribution']),
-                    'task_score' => json_encode($grades)
+                    'task_score' => json_encode($grades),
+                    'additional_quiz_id' => null // Set to null initially
                 ]
             );
 
@@ -861,11 +873,12 @@ class QuizController extends Controller
                 'averageScore' => $averageScore,
                 'distribution' => $bnResult['distribution'],
                 'weights' => $bnResult['weights'],
-                'task_distribution' => $bnResult['task_distribution']
+                'task_distribution' => $bnResult['task_distribution'],
+                'createAdditionalQuiz' => $createAdditionalQuiz
             ]);
 
-            if (!empty($failedTasks)) {
-                $this->createAdditionalQuiz($feedback, $failedTasks, $bnResult);
+            if ($createAdditionalQuiz) {
+                $this->createAdditionalQuiz($feedback, $failedTasks ?: $grades, $bnResult);
             }
         } catch (\Throwable $e) {
             Log::error("Failed to save feedback", [
@@ -919,12 +932,13 @@ class QuizController extends Controller
                         'courseId' => $courseId,
                         'task_distribution' => $task_distribution
                     ]);
-                    $failed_tasks = $feedback->failed_tasks ?? [];
+                    $failed_tasks = json_decode($feedback->failed_tasks, true) ?? [];
                     if (empty($failed_tasks)) {
-                        throw new \Exception("Distribusi tugas tidak tersedia dan tidak ada tugas gagal.");
+                        // Use all tasks if no failed tasks (for optional Task 5)
+                        $failed_tasks = [1, 2, 3, 4];
                     }
-                    $task_distribution = [];
                     $num_failed_tasks = count($failed_tasks);
+                    $task_distribution = [];
                     foreach ($failed_tasks as $task) {
                         $task_distribution[strval($task)] = ['easy' => 1, 'medium' => 1, 'hard' => 1];
                     }
@@ -962,7 +976,7 @@ class QuizController extends Controller
                     }
                 }
 
-                // Validasi task_distribution
+                // Validate task_distribution
                 $task_totals = ['easy' => 0, 'medium' => 0, 'hard' => 0];
                 foreach ($task_distribution as $task => $dist) {
                     if (!is_array($dist)) {
@@ -990,7 +1004,7 @@ class QuizController extends Controller
                     }
                 }
 
-                // Pastikan task_totals sesuai dengan question_distribution
+                // Ensure task_totals match question_distribution
                 $total_questions = $task_totals['easy'] + $task_totals['medium'] + $task_totals['hard'];
                 foreach (['easy', 'medium', 'hard'] as $difficulty) {
                     if ($task_totals[$difficulty] != $distribution[$difficulty]) {
@@ -1095,8 +1109,7 @@ class QuizController extends Controller
         }
     }
 
-
-    private function createAdditionalQuiz($feedback, $failedTasks, $bnResult)
+    private function createAdditionalQuiz($feedback, $tasks, $bnResult)
     {
         try {
             $studentId = $feedback->student_id;
@@ -1160,7 +1173,7 @@ class QuizController extends Controller
                         if ($taskQuestions->count() < $count) {
                             $remaining = $count - $taskQuestions->count();
                             $fallbackQuestions = Question::where('course_id', $courseId)
-                                ->whereIn('task_number', array_keys($failedTasks))
+                                ->whereIn('task_number', array_keys($tasks))
                                 ->where('difficulty', $difficulty)
                                 ->whereNotIn('id', $questions->pluck('id')->toArray())
                                 ->inRandomOrder()
@@ -1190,7 +1203,7 @@ class QuizController extends Controller
             if ($questionsCreated < 20) {
                 $remaining = 20 - $questionsCreated;
                 $extraQuestions = Question::where('course_id', $courseId)
-                    ->whereIn('task_number', array_keys($failedTasks))
+                    ->whereIn('task_number', array_keys($tasks))
                     ->whereNotIn('id', $questions->pluck('id')->toArray())
                     ->inRandomOrder()
                     ->take($remaining)
@@ -1230,7 +1243,7 @@ class QuizController extends Controller
                 'courseCode' => $course->course_code,
                 'quizId' => $quiz->id,
                 'questionCount' => $questionsCreated,
-                'failedTasks' => array_keys($failedTasks),
+                'taskNumbers' => array_keys($tasks),
                 'taskDistribution' => $task_distribution
             ]);
         } catch (QueryException $e) {
