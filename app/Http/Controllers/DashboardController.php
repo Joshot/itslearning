@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\CourseAssignment;
 use App\Models\Course;
 use App\Models\Quiz;
+use App\Models\StudentAttempt;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
@@ -30,14 +31,21 @@ class DashboardController extends Controller
                     return $course;
                 });
 
-            // Fetch quizzes for assigned courses with future or current end_time
+            // Fetch quizzes for assigned courses with future or current end_time, not attempted by student, and task_number != 5
             $quizzes = Quiz::whereIn('course_code', $courses->pluck('course_code'))
-                ->where('end_time', '>=', Carbon::today()->startOfDay())
+                ->where('end_time', '>=', Carbon::now('Asia/Jakarta'))
+                ->where('task_number', '!=', 5)
+                ->whereNotExists(function ($query) use ($userId) {
+                    $query->select('id')
+                        ->from('student_attempts')
+                        ->whereColumn('student_attempts.quiz_id', 'quizzes.id')
+                        ->where('student_attempts.student_id', $userId);
+                })
                 ->select('course_code', 'task_number', 'title', 'end_time')
                 ->get()
                 ->map(function ($quiz) use ($courses) {
                     $quiz->course_name = $courses->firstWhere('course_code', $quiz->course_code)->course_name ?? 'Unknown';
-                    $quiz->days_remaining = Carbon::today()->diffInDays($quiz->end_time, false);
+                    $quiz->days_remaining = Carbon::today('Asia/Jakarta')->diffInDays($quiz->end_time, false);
                     Log::debug("Quiz end_time for {$quiz->title}: {$quiz->end_time}, Days remaining: {$quiz->days_remaining}");
                     return $quiz;
                 })
@@ -50,9 +58,9 @@ class DashboardController extends Controller
             }
 
             if ($quizzes->isEmpty()) {
-                Log::warning("No upcoming quizzes found for student ID: {$userId}");
+                Log::warning("No upcoming unattempted quizzes (excluding task_number 5) found for student ID: {$userId}");
             } else {
-                Log::info("Found upcoming quizzes for student ID: {$userId}", ['quizzes' => $quizzes->pluck('title')->toArray()]);
+                Log::info("Found upcoming unattempted quizzes (excluding task_number 5) for student ID: {$userId}", ['quizzes' => $quizzes->pluck('title')->toArray()]);
             }
 
             return view($view, [
@@ -77,12 +85,12 @@ class DashboardController extends Controller
 
             // Fetch quizzes for assigned courses with future or current end_time
             $quizzes = Quiz::whereIn('course_code', $courses->pluck('course_code'))
-                ->where('end_time', '>=', Carbon::today()->startOfDay())
+                ->where('end_time', '>=', Carbon::now('Asia/Jakarta'))
                 ->select('course_code', 'task_number', 'title', 'end_time')
                 ->get()
                 ->map(function ($quiz) use ($courses) {
                     $quiz->course_name = $courses->firstWhere('course_code', $quiz->course_code)->course_name ?? 'Unknown';
-                    $quiz->days_remaining = Carbon::today()->diffInDays($quiz->end_time, false);
+                    $quiz->days_remaining = Carbon::today('Asia/Jakarta')->diffInDays($quiz->end_time, false);
                     Log::debug("Quiz end_time for {$quiz->title}: {$quiz->end_time}, Days remaining: {$quiz->days_remaining}");
                     return $quiz;
                 })

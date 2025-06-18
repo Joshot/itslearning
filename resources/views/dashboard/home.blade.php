@@ -13,7 +13,7 @@
         font-weight: bold;
         border-bottom: 2px solid transparent;
         transition: all 0.3s ease;
-        position: relative; /* For notification badge positioning */
+        position: relative;
     }
     .tab-button.active {
         border-bottom: 2px solid #106587;
@@ -96,7 +96,6 @@
         font-size: 0.75rem;
         font-weight: bold;
     }
-    /* SweetAlert Mobile Styling */
     .swal2-popup {
         font-size: 1rem !important;
         padding: 1rem !important;
