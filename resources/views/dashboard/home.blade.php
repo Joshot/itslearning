@@ -13,6 +13,7 @@
         font-weight: bold;
         border-bottom: 2px solid transparent;
         transition: all 0.3s ease;
+        position: relative; /* For notification badge positioning */
     }
     .tab-button.active {
         border-bottom: 2px solid #106587;
@@ -61,14 +62,14 @@
     .edit-profile-btn:hover {
         background: #0d4a6b;
     }
-    .course-card {
+    .course-card, .timeline-card {
         background: white;
         padding: 1rem;
         border-radius: 0.75rem;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
-    .course-card:hover {
+    .course-card:hover, .timeline-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
     }
@@ -79,6 +80,36 @@
     }
     #dropdownToggle:hover {
         background: #e2e8f0;
+    }
+    .notification-badge {
+        position: absolute;
+        top: -8px;
+        right: 10px;
+        background: #dc2626;
+        color: white;
+        border-radius: 9999px;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    /* SweetAlert Mobile Styling */
+    .swal2-popup {
+        font-size: 1rem !important;
+        padding: 1rem !important;
+    }
+    .swal2-title {
+        font-size: 1.25rem !important;
+    }
+    .swal2-content {
+        font-size: 0.875rem !important;
+    }
+    .swal2-confirm, .swal2-cancel {
+        font-size: 0.875rem !important;
+        padding: 0.5rem 1rem !important;
     }
     @media (max-width: 1400px) {
         #cardView {
@@ -169,6 +200,11 @@
             padding: 0.75rem;
             font-size: 0.95rem;
         }
+        .notification-badge {
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+        }
     }
     @media (max-width: 768px) {
         .dashboard-container {
@@ -240,6 +276,27 @@
             width: 2rem;
             height: 2rem;
         }
+        .swal2-popup {
+            width: 90% !important;
+            max-width: 300px !important;
+            font-size: 0.9rem !important;
+            padding: 0.75rem !important;
+        }
+        .swal2-title {
+            font-size: 1.1rem !important;
+        }
+        .swal2-content {
+            font-size: 0.8rem !important;
+        }
+        .swal2-confirm, .swal2-cancel {
+            font-size: 0.8rem !important;
+            padding: 0.4rem 0.8rem !important;
+        }
+        .notification-badge {
+            width: 16px;
+            height: 16px;
+            font-size: 0.65rem;
+        }
     }
     @media (max-width: 480px) {
         .dashboard-container {
@@ -284,6 +341,27 @@
         #cardView p {
             font-size: 0.75rem;
         }
+        .swal2-popup {
+            width: 85% !important;
+            max-width: 280px !important;
+            font-size: 0.85rem !important;
+            padding: 0.5rem !important;
+        }
+        .swal2-title {
+            font-size: 1rem !important;
+        }
+        .swal2-content {
+            font-size: 0.75rem !important;
+        }
+        .swal2-confirm, .swal2-cancel {
+            font-size: 0.75rem !important;
+            padding: 0.3rem 0.7rem !important;
+        }
+        .notification-badge {
+            width: 14px;
+            height: 14px;
+            font-size: 0.6rem;
+        }
     }
     html, body {
         margin: 0;
@@ -318,7 +396,12 @@
         <div class="flex-[8] bg-white shadow-lg rounded-2xl p-8 h-[600px] overflow-y-auto flex flex-col main-content">
             <div class="flex border-b">
                 <button id="tab-course" class="tab-button active">Course List</button>
-                <button id="tab-timeline" class="tab-button">Timeline</button>
+                <button id="tab-timeline" class="tab-button">
+                    Timeline
+                    @if ($quizzes->isNotEmpty())
+                    <span class="notification-badge">{{ $quizzes->count() }}</span>
+                    @endif
+                </button>
             </div>
             <div id="content-course" class="tab-content block flex flex-col items-center">
                 <!-- Dropdown Toggle -->
@@ -377,16 +460,49 @@
                     </ul>
                 </div>
             </div>
-            <div id="content-timeline" class="tab-content hidden flex flex-col items-center justify-center h-full">
-                <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
-                </svg>
-                <p class="mt-2 text-gray-500">No upcoming activities due</p>
+            <div id="content-timeline" class="tab-content hidden flex flex-col items-center justify-start h-full pt-4">
+                @if ($quizzes->isEmpty())
+                <div class="flex flex-col items-center justify-center h-full">
+                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <p class="mt-2 text-gray-500">No upcoming activities due</p>
+                </div>
+                @else
+                <div class="w-full max-w-5xl flex flex-col items-center gap-4">
+                    @foreach ($quizzes as $quiz)
+                    @php
+                    $formattedEndTime = \Carbon\Carbon::parse($quiz->end_time)->format('d M Y, H:i');
+                    $courseId = strtolower(str_replace('-', '', $quiz->course_code));
+                    $daysRemaining = floor($quiz->days_remaining);
+                    @endphp
+                    <a href="{{ route('course.show', $courseId) }}" class="w-full max-w-md timeline-card" data-no-prevent>
+                        <div class="p-4">
+                            <h3 class="text-base font-semibold text-gray-800">{{ $quiz->title }}</h3>
+                            <p class="text-xs text-gray-500 mt-1">Course: {{ $quiz->course_name }} ({{ $quiz->course_code }})</p>
+                            <p class="text-xs text-gray-500 mt-1">Task Number: {{ $quiz->task_number }}</p>
+                            <p class="text-xs text-gray-500 mt-1">Due: {{ $formattedEndTime }}</p>
+                            <p class="text-xs text-gray-600 mt-2">
+                                @if ($daysRemaining > 0)
+                                {{ $daysRemaining }} day{{ $daysRemaining > 1 ? 's' : '' }} remaining
+                                @elseif ($daysRemaining == 0)
+                                Due today!
+                                @else
+                                Due soon!
+                                @endif
+                            </p>
+                        </div>
+                    </a>
+                    @endforeach
+                </div>
+                @endif
             </div>
         </div>
     </div>
 </div>
 
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const tabs = document.querySelectorAll(".tab-button");
@@ -434,6 +550,38 @@
                 contents[index].classList.remove("hidden");
             });
         });
+
+        // SweetAlert2 for pending quizzes
+    @if ($quizzes->isNotEmpty())
+            let pendingQuizzes = [];
+    @foreach ($quizzes as $quiz)
+    @php
+        $formattedEndTime = \Carbon\Carbon::parse($quiz->end_time)->format('d M Y, H:i');
+    @endphp
+        pendingQuizzes.push({
+            title: "{{ $quiz->title }}",
+            course_code: "{{ $quiz->course_code }}",
+            end_time: "{{ $formattedEndTime }}"
+        });
+    @endforeach
+        if (pendingQuizzes.length > 0) {
+            let quizList = pendingQuizzes.map(quiz => `
+                    <div style="text-align: left; margin-bottom: 10px;">
+                        <strong>Tugas:</strong> ${quiz.title}<br>
+                        <strong>Kode Mata Kuliah:</strong> ${quiz.course_code}<br>
+                        <strong>Batas Waktu:</strong> ${quiz.end_time}
+                    </div>
+                `).join('');
+            Swal.fire({
+                title: 'Ada tugas yang harus diselesaikan!',
+                html: quizList,
+                icon: 'warning',
+                confirmButtonColor: '#106587',
+                confirmButtonText: 'OK'
+            });
+        }
+    @endif
     });
 </script>
+@endpush
 @endsection

@@ -13,6 +13,7 @@
         font-weight: bold;
         border-bottom: 2px solid transparent;
         transition: all 0.3s ease;
+        position: relative; /* For notification badge */
     }
     .tab-button.active {
         border-bottom: 2px solid #106587;
@@ -71,6 +72,31 @@
     .course-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+    .timeline-item {
+        background: white;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        transition: background 0.3s ease;
+        width: 100%;
+    }
+    .timeline-item:hover {
+        background: #f9fafb;
+    }
+    .notification-badge {
+        position: absolute;
+        top: -8px;
+        right: 10px;
+        background: #dc2626;
+        color: white;
+        border-radius: 9999px;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
     }
     #dropdownToggle {
         padding: 0.5rem 1rem;
@@ -170,6 +196,14 @@
             padding: 0.75rem;
             font-size: 0.95rem;
         }
+        .notification-badge {
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+        }
+        .timeline-item {
+            padding: 1.25rem;
+        }
     }
     @media (max-width: 768px) {
         .dashboard-container {
@@ -177,7 +211,6 @@
             width: 100vw;
             max-width: 100%;
             margin: 0;
-            overflow-x: hidden;
         }
         #cardView {
             grid-template-columns: 1fr;
@@ -235,12 +268,13 @@
             padding: 0.6rem;
             font-size: 0.9rem;
         }
-        #content-timeline p {
-            font-size: 0.95rem;
+        .notification-badge {
+            width: 16px;
+            height: 16px;
+            font-size: 0.65rem;
         }
-        #content-timeline svg {
-            width: 2rem;
-            height: 2rem;
+        .timeline-item {
+            padding: 1rem;
         }
     }
     @media (max-width: 480px) {
@@ -286,6 +320,14 @@
         #cardView p {
             font-size: 0.75rem;
         }
+        .notification-badge {
+            width: 14px;
+            height: 14px;
+            font-size: 0.6rem;
+        }
+        .timeline-item {
+            padding: 0.75rem;
+        }
     }
     html, body {
         margin: 0;
@@ -300,15 +342,12 @@
         <!-- Sidebar -->
         <div class="flex-[2] bg-white shadow-lg rounded-2xl p-8 h-[600px] overflow-y-auto flex flex-col profile-card sidebar">
             <h2 class="text-2xl font-semibold">Profile</h2>
-
             @php
             $photoPath = Auth::guard('lecturer')->user()->profile_photo ?? '/images/profile.jpg';
             $isDefault = $photoPath === '/images/profile.jpg';
             @endphp
-
             <img src="{{ $isDefault ? asset($photoPath) : asset('storage/' . $photoPath) }}"
                  alt="Profile Picture" class="w-32 h-32 rounded-full mx-auto mt-4">
-
             <p class="mt-4 text-center">
                 Name: <strong>{{ Auth::guard('lecturer')->user()->name ?? 'Guest' }}
                     ({{ Auth::guard('lecturer')->user()->nidn ?? 'Guest' }})</strong>
@@ -324,9 +363,13 @@
         <div class="flex-[8] bg-white shadow-lg rounded-2xl p-8 h-[600px] overflow-y-auto flex flex-col main-content">
             <div class="flex border-b">
                 <button id="tab-course" class="tab-button active">Course List</button>
-                <button id="tab-timeline" class="tab-button">Timeline</button>
+                <button id="tab-timeline" class="tab-button">
+                    Timeline
+                    @if ($quizzes->isNotEmpty())
+                    <span class="notification-badge">{{ $quizzes->count() }}</span>
+                    @endif
+                </button>
             </div>
-
             <div id="content-course" class="tab-content block flex flex-col items-center">
                 <!-- Dropdown Toggle -->
                 <div class="w-full flex justify-end mb-2 mt-4">
@@ -343,9 +386,11 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Card View -->
                 <div id="cardView" class="grid grid-cols-3 md:grid-cols-2 sm:grid-cols-2 gap-6 max-w-5xl w-full">
+                    @if ($courses->isEmpty())
+                    <p class="text-gray-600 col-span-full text-center">Belum ada mata kuliah yang ditugaskan untuk Anda.</p>
+                    @else
                     @foreach ($courses as $index => $course)
                     @php
                     $imageNumber = ($index % 6) + 1;
@@ -359,11 +404,14 @@
                         </div>
                     </a>
                     @endforeach
+                    @endif
                 </div>
-
                 <!-- List View -->
                 <div id="listView" class="hidden max-w-5xl w-full">
                     <ul class="bg-white rounded-lg shadow-md divide-y">
+                        @if ($courses->isEmpty())
+                        <li class="p-4 text-gray-600 text-center">Belum ada mata kuliah yang ditugaskan untuk Anda.</li>
+                        @else
                         @foreach ($courses as $course)
                         <li class="p-4 flex justify-between items-center hover:bg-gray-100 cursor-pointer transition rounded-md">
                             <a href="{{ url('/lecturer/course/' . $course->course_id) }}" class="w-full text-left flex justify-between items-center" data-no-prevent>
@@ -374,20 +422,52 @@
                             </a>
                         </li>
                         @endforeach
+                        @endif
                     </ul>
                 </div>
             </div>
-
-            <div id="content-timeline" class="tab-content hidden flex flex-col items-center justify-center h-full">
-                <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
-                </svg>
-                <p class="mt-2 text-gray-500">No upcoming activities due</p>
+            <div id="content-timeline" class="tab-content hidden flex flex-col items-center justify-start h-full pt-4">
+                @if ($quizzes->isEmpty())
+                <div class="flex flex-col items-center justify-center h-full">
+                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <p class="mt-2 text-gray-500">No upcoming activities due</p>
+                </div>
+                @else
+                <div class="w-full max-w-5xl flex flex-col gap-2">
+                    @foreach ($quizzes as $quiz)
+                    @php
+                    $formattedEndTime = \Carbon\Carbon::parse($quiz->end_time)->format('d M Y, H:i');
+                    $courseId = strtolower(str_replace('-', '', $quiz->course_code));
+                    $daysRemaining = floor($quiz->days_remaining);
+                    @endphp
+                    <a href="{{ url('/lecturer/course/' . $courseId) }}" class="timeline-item" data-no-prevent>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-800">{{ $quiz->title }}</h3>
+                            <p class="text-xs text-gray-500 mt-1">Course: {{ $quiz->course_name }} ({{ $quiz->course_code }})</p>
+                            <p class="text-xs text-gray-500 mt-1">Task Number: {{ $quiz->task_number }}</p>
+                            <p class="text-xs text-gray-500 mt-1">Due: {{ $formattedEndTime }}</p>
+                            <p class="text-xs text-gray-600 mt-2">
+                                @if ($daysRemaining > 0)
+                                {{ $daysRemaining }} day{{ $daysRemaining > 1 ? 's' : '' }} remaining
+                                @elseif ($daysRemaining == 0)
+                                Due today!
+                                @else
+                                Due soon!
+                                @endif
+                            </p>
+                        </div>
+                    </a>
+                    @endforeach
+                </div>
+                @endif
             </div>
         </div>
     </div>
 </div>
 
+@push('scripts')
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const tabs = document.querySelectorAll(".tab-button");
@@ -437,4 +517,5 @@
         });
     });
 </script>
+@endpush
 @endsection
