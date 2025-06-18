@@ -17,6 +17,7 @@ return new class extends Migration
             $table->json('failed_tasks')->nullable();
             $table->json('question_distribution')->nullable();
             $table->json('question_weights')->nullable();
+            $table->json('task_distribution')->nullable();
             $table->unsignedBigInteger('additional_quiz_id')->nullable();
             $table->timestamps();
 

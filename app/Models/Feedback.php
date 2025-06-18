@@ -17,13 +17,15 @@ class Feedback extends Model
         'failed_tasks',
         'question_distribution',
         'question_weights',
+        'task_distribution',
         'additional_quiz_id'
     ];
 
     protected $casts = [
         'failed_tasks' => 'array',
         'question_distribution' => 'array',
-        'question_weights' => 'array'
+        'question_weights' => 'array',
+        'task_distribution' => 'array'
     ];
 
     public function student()
