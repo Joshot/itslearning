@@ -204,6 +204,46 @@ class QuizController extends Controller
             $attempt->errors_hard = $errors['hard'];
             $attempt->save();
 
+            // Update feedback average_score for Task 5
+            if ($quiz->task_number == 5) {
+                $feedback = Feedback::where('student_id', $studentId)
+                    ->where('course_id', $course->id)
+                    ->first();
+
+                if ($feedback) {
+                    $allAttempts = StudentAttempt::where('student_id', $studentId)
+                        ->where('course_id', $course->id)
+                        ->whereIn('task_number', [1, 2, 3, 4, 5])
+                        ->pluck('score', 'task_number')
+                        ->toArray();
+
+                    // Calculate new average: (T1 + T2 + T3 + T4 + T5) / 5
+                    $totalScore = 0;
+                    foreach ([1, 2, 3, 4, 5] as $task) {
+                        $totalScore += $allAttempts[$task] ?? 0;
+                    }
+                    $newAverage = $totalScore / 5;
+
+                    $feedback->update([
+                        'average_score' => $newAverage
+                    ]);
+
+                    Log::info("Feedback average_score updated for Task 5", [
+                        'studentId' => $studentId,
+                        'courseId' => $course->id,
+                        'feedbackId' => $feedback->id,
+                        'newAverage' => $newAverage,
+                        'taskScores' => $allAttempts
+                    ]);
+                } else {
+                    Log::error("Feedback not found for average_score update", [
+                        'studentId' => $studentId,
+                        'courseId' => $course->id,
+                        'quizId' => $quizId
+                    ]);
+                }
+            }
+
             Log::info("Quiz submitted", [
                 'studentId' => $studentId,
                 'quizId' => $quizId,
@@ -283,6 +323,7 @@ class QuizController extends Controller
         }
     }
 
+
     public function reviewQuiz($courseCode, $quizId)
     {
         $studentId = Auth::guard('student')->id();
@@ -292,6 +333,23 @@ class QuizController extends Controller
             $course = Course::where('course_code', $formattedCourseCode)->firstOrFail();
             $quiz = Quiz::where('id', $quizId)->where('course_code', $formattedCourseCode)->firstOrFail();
 
+            // For Task 5, check feedback.additional_quiz_id
+            if ($quiz->task_number == 5) {
+                $feedback = Feedback::where('course_id', $course->id)
+                    ->where('student_id', $studentId)
+                    ->where('additional_quiz_id', $quizId)
+                    ->first();
+                if (!$feedback) {
+                    Log::error("No feedback found for Task 5 review", [
+                        'studentId' => $studentId,
+                        'quizId' => $quizId,
+                        'courseId' => $course->id
+                    ]);
+                    return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
+                        ->with('error', 'Data kuis tambahan tidak ditemukan.');
+                }
+            }
+
             $attempt = StudentAttempt::where('student_id', $studentId)
                 ->where('quiz_id', $quizId)
                 ->where('course_id', $course->id)
@@ -299,7 +357,12 @@ class QuizController extends Controller
                 ->first();
 
             if (!$attempt) {
-                Log::error("No attempt found for review", ['studentId' => $studentId, 'quizId' => $quizId]);
+                Log::error("No attempt found for review", [
+                    'studentId' => $studentId,
+                    'quizId' => $quizId,
+                    'courseId' => $course->id,
+                    'taskNumber' => $quiz->task_number
+                ]);
                 return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
                     ->with('error', 'Tidak ada data kuis yang ditemukan.');
             }
@@ -310,15 +373,34 @@ class QuizController extends Controller
                 ->get()
                 ->keyBy('question_id');
 
+            if ($studentAnswers->isEmpty()) {
+                Log::error("No student answers found for review", [
+                    'studentId' => $studentId,
+                    'quizId' => $quizId,
+                    'attemptId' => $attempt->id
+                ]);
+                return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
+                    ->with('error', 'Tidak ada jawaban yang ditemukan untuk kuis ini.');
+            }
+
             // Get question IDs in the order of StudentAnswer
             $questionIds = $studentAnswers->pluck('question_id')->toArray();
 
             // Fetch Questions in the same order as question IDs
             $questions = Question::whereIn('id', $questionIds)
                 ->where('course_id', $course->id)
-                ->where('task_number', $quiz->task_number)
                 ->orderByRaw('FIELD(id, ' . implode(',', $questionIds) . ')')
                 ->get();
+
+            if ($questions->count() != ($quiz->task_number == 5 ? 20 : 10)) {
+                Log::warning("Incorrect number of questions for review", [
+                    'studentId' => $studentId,
+                    'quizId' => $quizId,
+                    'taskNumber' => $quiz->task_number,
+                    'expected' => $quiz->task_number == 5 ? 20 : 10,
+                    'found' => $questions->count()
+                ]);
+            }
 
             return view('lecture.reviewtugas', [
                 'quiz' => $quiz,
@@ -334,7 +416,17 @@ class QuizController extends Controller
             Log::error("Database error in reviewQuiz", [
                 'error' => $e->getMessage(),
                 'studentId' => $studentId,
-                'quizId' => $quizId
+                'quizId' => $quizId,
+                'courseCode' => $formattedCourseCode
+            ]);
+            return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
+                ->with('error', 'Gagal mengakses data review. Hubungi admin.');
+        } catch (\Exception $e) {
+            Log::error("General error in reviewQuiz", [
+                'error' => $e->getMessage(),
+                'studentId' => $studentId,
+                'quizId' => $quizId,
+                'courseCode' => $formattedCourseCode
             ]);
             return redirect()->route('course.show', ['courseCode' => strtolower(str_replace('-', '', $courseCode))])
                 ->with('error', 'Gagal mengakses data review. Hubungi admin.');

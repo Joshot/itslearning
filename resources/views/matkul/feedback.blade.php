@@ -307,10 +307,17 @@
                         <p class="score-value">{{ $scoreData['score'] }}/100 ({{ $grades[$task] }})</p>
                     </div>
                     @endforeach
+                    @if ($feedback && $feedback->additional_quiz_id && $additionalAttempt)
                     <div class="score-card">
                         <p class="font-semibold">Rata-rata</p>
                         <p class="average-score">{{ number_format($feedback->average_score, 2) }}/100</p>
                     </div>
+                    @else
+                    <div class="score-card">
+                        <p class="font-semibold">Rata-rata</p>
+                        <p class="average-score">{{ number_format($feedback->average_score, 2) }}/100</p>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
