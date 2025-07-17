@@ -211,18 +211,9 @@ class QuizController extends Controller
                     ->first();
 
                 if ($feedback) {
-                    $allAttempts = StudentAttempt::where('student_id', $studentId)
-                        ->where('course_id', $course->id)
-                        ->whereIn('task_number', [1, 2, 3, 4, 5])
-                        ->pluck('score', 'task_number')
-                        ->toArray();
-
-                    // Calculate new average: (T1 + T2 + T3 + T4 + T5) / 5
-                    $totalScore = 0;
-                    foreach ([1, 2, 3, 4, 5] as $task) {
-                        $totalScore += $allAttempts[$task] ?? 0;
-                    }
-                    $newAverage = $totalScore / 5;
+                    // Calculate new average: (previous feedback average_score + Task 5 score) / 2
+                    $previousAverage = $feedback->average_score ?? 0;
+                    $newAverage = ($previousAverage + $score) / 2;
 
                     $feedback->update([
                         'average_score' => $newAverage
@@ -232,8 +223,9 @@ class QuizController extends Controller
                         'studentId' => $studentId,
                         'courseId' => $course->id,
                         'feedbackId' => $feedback->id,
-                        'newAverage' => $newAverage,
-                        'taskScores' => $allAttempts
+                        'previousAverage' => $previousAverage,
+                        'task5Score' => $score,
+                        'newAverage' => $newAverage
                     ]);
                 } else {
                     Log::error("Feedback not found for average_score update", [
