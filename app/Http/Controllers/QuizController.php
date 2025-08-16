@@ -499,7 +499,7 @@ class QuizController extends Controller
         $task_distribution = [];
         $createAdditionalQuiz = false;
 
-        // Generate Task 5 if average < 85 or there are failed tasks
+        // Generate Tugas Tambahan if average < 85 or there are failed tasks
         if ($averageScore < 85 || !empty($failedTasks)) {
             $createAdditionalQuiz = true;
             $questions_per_task = [
@@ -523,15 +523,15 @@ class QuizController extends Controller
 
             // Total attempts per difficulty
             $total_soal_attempts = [
-                'easy' => $questions_per_task['easy'] * $num_failed_tasks,
-                'medium' => $questions_per_task['medium'] * $num_failed_tasks,
-                'hard' => $questions_per_task['hard'] * $num_failed_tasks
+                'easy' => $questions_per_task['easy'] * $num_failed_tasks, //12
+                'medium' => $questions_per_task['medium'] * $num_failed_tasks, //9
+                'hard' => $questions_per_task['hard'] * $num_failed_tasks //9
             ];
 
             // Calculate success rates
             $success_rates = [];
             foreach ($difficulties as $d) {
-                $error_rate = $errors[$d] / max(1, $total_soal_attempts[$d]);
+                $error_rate = $errors[$d] / max(1, $total_soal_attempts[$d]); //dicari dulu error ratenya
                 $success_rates[$d] = max(0.0001, 1 - $error_rate);
             }
 
@@ -543,20 +543,20 @@ class QuizController extends Controller
                 $total_posterior += $posterior_S[$d];
             }
 
-            // Normalize posterior
+            // Normalize posterior PERHITUNGAN TEROEMA BAYES
             $distribusi_soal = [];
             foreach ($difficulties as $d) {
                 $distribusi_soal[$d] = ($total_posterior > 0) ? $posterior_S[$d] / $total_posterior : (1 / count($difficulties));
             }
 
-            // Calculate question distribution
+            // Calculate question distribution DIHITUNG YANG 20 SOAL
             $questions_per_difficulty = [
                 'easy' => round($num_questions * $distribusi_soal['easy']),
                 'medium' => round($num_questions * $distribusi_soal['medium']),
                 'hard' => round($num_questions * $distribusi_soal['hard'])
             ];
 
-            // Adjust distribution
+            // Adjust distribution MATERI PER TUGAS
             $total = array_sum($questions_per_difficulty);
             $max_attempts = ceil(log($num_failed_tasks * count($difficulties), 2));
             $attempt = 0;
@@ -599,19 +599,19 @@ class QuizController extends Controller
                 $questions_per_difficulty = ['easy' => 9, 'medium' => 6, 'hard' => 5];
             }
 
-            // Distribute questions to tasks
+            // Distribute questions to tasks MINIMAL HARUS ADA 1
             foreach ($taskNumbers as $task) {
                 $task_distribution[strval($task)] = ['easy' => 1, 'medium' => 1, 'hard' => 1];
             }
 
-            // Calculate allocated questions
+            // Calculate allocated questions PEMBAGIANNYA AWAL DULU
             $allocated_questions = [
                 'easy' => $num_failed_tasks,
                 'medium' => $num_failed_tasks,
                 'hard' => $num_failed_tasks
             ];
 
-            // Distribute remaining questions
+            // Distribute remaining questions SISA SOAL UNTUK DITAMBAHKAN KE TUGAS
             foreach (['easy', 'medium', 'hard'] as $difficulty) {
                 $remaining_count = $questions_per_difficulty[$difficulty] - $allocated_questions[$difficulty];
                 if ($remaining_count > 0) {
@@ -643,7 +643,7 @@ class QuizController extends Controller
                 }
             }
 
-            // Validate task distribution
+            // Validate task distribution HASIL
             $actual_counts = ['easy' => 0, 'medium' => 0, 'hard' => 0];
             foreach ($task_distribution as $task => $dist) {
                 foreach (['easy', 'medium', 'hard'] as $difficulty) {
@@ -710,7 +710,7 @@ class QuizController extends Controller
                 'question_distribution' => $questions_per_difficulty
             ]);
 
-            // Calculate weights using Bayesian Network
+            // Calculate weights using Bayesian Network NILAI
             $default_weights = ['easy' => 5, 'medium' => 10, 'hard' => 15];
             $initial_weights = [];
             foreach ($difficulties as $d) {
@@ -805,7 +805,7 @@ class QuizController extends Controller
         }
 
         // Generate Feedback Text
-        $feedbackText = "Halo bro, apa kabar? Nih hasil tugas-tugasmu:\n";
+        $feedbackText = "Halo, apa kabar? Nih hasil tugas-tugasmu:\n";
         foreach ($grades as $task => $score) {
             $gradeLetter = 'E';
             foreach ($gradeScale as $threshold => $letter) {
